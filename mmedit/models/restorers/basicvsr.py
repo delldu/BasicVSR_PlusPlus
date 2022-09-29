@@ -10,6 +10,7 @@ from mmedit.core import tensor2img
 from ..registry import MODELS
 from .basic_restorer import BasicRestorer
 
+import pdb
 
 @MODELS.register_module()
 class BasicVSR(BasicRestorer):
@@ -39,6 +40,13 @@ class BasicVSR(BasicRestorer):
                  pretrained=None):
         super().__init__(generator, pixel_loss, train_cfg, test_cfg,
                          pretrained)
+        # zoom:
+        # generator = {'type': 'BasicVSRPlusPlus', 
+        # 'mid_channels': 64, 'num_blocks': 7, 'is_low_res_input': True
+
+        # xxxx8888, Denoise
+        # 'mid_channels': 64, 'num_blocks': 15, 
+        # 'is_low_res_input': False, 
 
         # fix pre-trained networks
         self.fix_iter = train_cfg.get('fix_iter', 0) if train_cfg else 0
@@ -49,7 +57,7 @@ class BasicVSR(BasicRestorer):
 
         # ensemble
         self.forward_ensemble = None
-        if ensemble is not None:
+        if ensemble is not None: # zoom, False
             if ensemble['type'] == 'SpatialTemporalEnsemble':
                 from mmedit.models.common.ensemble import \
                     SpatialTemporalEnsemble
@@ -126,6 +134,8 @@ class BasicVSR(BasicRestorer):
         Returns:
             dict: Evaluation results.
         """
+        pdb.set_trace()
+
         crop_border = self.test_cfg.crop_border
         convert_to = self.test_cfg.get('convert_to', None)
 
@@ -168,15 +178,18 @@ class BasicVSR(BasicRestorer):
         Returns:
             dict: Output results.
         """
+
+        # self.generator -- BasicVSRPlusPlus
+
         with torch.no_grad():
-            if self.forward_ensemble is not None:
+            if self.forward_ensemble is not None: # zoom: False
                 output = self.forward_ensemble(lq, self.generator)
             else:
                 output = self.generator(lq)
 
         # If the GT is an image (i.e. the center frame), the output sequence is
         # turned to an image.
-        if gt is not None and gt.ndim == 4:
+        if gt is not None and gt.ndim == 4: # Zoom: False
             t = output.size(1)
             if self.check_if_mirror_extended(lq):  # with mirror extension
                 output = 0.5 * (output[:, t // 4] + output[:, -1 - t // 4])
@@ -221,4 +234,5 @@ class BasicVSR(BasicRestorer):
                     mmcv.imwrite(
                         tensor2img(output[:, i, :, :, :]), save_path_i)
 
+        # results.keys() -- dict_keys(['lq', 'output'])
         return results

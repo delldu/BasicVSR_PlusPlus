@@ -10,6 +10,7 @@ import torch
 from mmedit.apis import init_model, restoration_video_inference
 from mmedit.core import tensor2img
 from mmedit.utils import modify_args
+import pdb
 
 VIDEO_EXTENSIONS = ('.mp4', '.mov')
 
@@ -24,11 +25,11 @@ def parse_args():
     parser.add_argument(
         '--start-idx',
         type=int,
-        default=0,
+        default=1,
         help='index corresponds to the first frame of the sequence')
     parser.add_argument(
         '--filename-tmpl',
-        default='{:08d}.png',
+        default='{:06d}.png',
         help='template of the file names')
     parser.add_argument(
         '--window-size',
@@ -38,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--max-seq-len',
         type=int,
-        default=None,
+        default=1,
         help='maximum sequence length if recurrent framework is used')
     parser.add_argument('--device', type=int, default=0, help='CUDA device id')
     args = parser.parse_args()
@@ -58,6 +59,20 @@ def main():
 
     model = init_model(
         args.config, args.checkpoint, device=torch.device('cuda', args.device))
+
+    # model -- BasicVSR
+    # pp args.input_dir, args.window_size -- ('data/demo_000', 0) 
+    # pp args.start_idx, args.filename_tmpl, args.max_seq_len -- (0, '{:08d}.png', None)
+
+    # torch.save(model.generator.state_dict(), "/tmp/video_zoom4x.pth")
+
+    # Denoise:
+    # torch.save(model.generator.state_dict(), "/tmp/video_denoise.pth")
+    # 
+
+    pdb.set_trace()
+    #
+    # torch.save(model.generator.state_dict(), "/tmp/video_deblur.pth")
 
     output = restoration_video_inference(model, args.input_dir,
                                          args.window_size, args.start_idx,

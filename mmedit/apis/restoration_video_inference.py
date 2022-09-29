@@ -7,6 +7,7 @@ from functools import reduce
 import mmcv
 import numpy as np
 import torch
+import pdb
 
 from mmedit.datasets.pipelines import Compose
 
@@ -52,6 +53,12 @@ def restoration_video_inference(model,
     """
 
     device = next(model.parameters()).device  # model device
+    # zoom, xxxx8888
+    # img_dir = 'data/demo_000'
+    # window_size = 0
+    # start_idx = 0
+    # filename_tmpl = '{:08d}.png'
+    # max_seq_len = None
 
     # build the data pipeline
     if model.cfg.get('demo_pipeline', None):
@@ -63,7 +70,8 @@ def restoration_video_inference(model,
 
     # check if the input is a video
     file_extension = osp.splitext(img_dir)[1]
-    if file_extension in VIDEO_EXTENSIONS:
+
+    if file_extension in VIDEO_EXTENSIONS: # False
         video_reader = mmcv.VideoReader(img_dir)
         # load the images
         data = dict(lq=[], lq_path=None, key=img_dir)
@@ -102,6 +110,7 @@ def restoration_video_inference(model,
 
     # compose the pipeline
     test_pipeline = Compose(test_pipeline)
+
     data = test_pipeline(data)
     data = data['lq'].unsqueeze(0)  # in cpu
 
@@ -112,10 +121,13 @@ def restoration_video_inference(model,
             result = []
             for i in range(0, data.size(1) - 2 * (window_size // 2)):
                 data_i = data[:, i:i + window_size].to(device)
+                pdb.set_trace()
+
                 result.append(model(lq=data_i, test_mode=True)['output'].cpu())
             result = torch.stack(result, dim=1)
         else:  # recurrent framework
             if max_seq_len is None:
+                # data.size() -- [1, 21, 3, 180, 320]
                 result = model(
                     lq=data.to(device), test_mode=True)['output'].cpu()
             else:

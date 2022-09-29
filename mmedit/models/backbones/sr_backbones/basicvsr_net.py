@@ -10,6 +10,7 @@ from mmedit.models.common import (PixelShufflePack, ResidualBlockNoBN,
 from mmedit.models.registry import BACKBONES
 from mmedit.utils import get_root_logger
 
+import pdb
 
 @BACKBONES.register_module()
 class BasicVSRNet(nn.Module):
@@ -32,6 +33,7 @@ class BasicVSRNet(nn.Module):
     def __init__(self, mid_channels=64, num_blocks=30, spynet_pretrained=None):
 
         super().__init__()
+        pdb.set_trace()
 
         self.mid_channels = mid_channels
 
@@ -58,6 +60,7 @@ class BasicVSRNet(nn.Module):
 
         # activation function
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        pdb.set_trace()
 
     def check_if_mirror_extended(self, lrs):
         """Check whether the input is a mirror-extended sequence.
@@ -238,6 +241,7 @@ class SPyNet(nn.Module):
 
     def __init__(self, pretrained):
         super().__init__()
+        # xxxx8888
 
         self.basic_module = nn.ModuleList(
             [SPyNetBasicModule() for _ in range(6)])
