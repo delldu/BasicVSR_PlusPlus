@@ -2,20 +2,15 @@
 import numpy as np
 import pytest
 
-from mmedit.core.mask import (bbox2mask, brush_stroke_mask, get_irregular_mask,
-                              random_bbox)
+from mmedit.core.mask import bbox2mask, brush_stroke_mask, get_irregular_mask, random_bbox
 
 
 def test_bbox_mask():
     # default config for random bbox mask
-    cfg = dict(
-        img_shape=(256, 256),
-        max_bbox_shape=100,
-        max_bbox_delta=10,
-        min_margin=10)
+    cfg = dict(img_shape=(256, 256), max_bbox_shape=100, max_bbox_delta=10, min_margin=10)
 
     bbox = random_bbox(**cfg)
-    mask_bbox = bbox2mask(cfg['img_shape'], bbox)
+    mask_bbox = bbox2mask(cfg["img_shape"], bbox)
     assert mask_bbox.shape == (256, 256, 1)
     zero_area = np.sum((mask_bbox == 0).astype(np.uint8))
     ones_area = np.sum((mask_bbox == 1).astype(np.uint8))
@@ -24,23 +19,23 @@ def test_bbox_mask():
 
     with pytest.raises(ValueError):
         cfg_ = cfg.copy()
-        cfg_['max_bbox_shape'] = 300
+        cfg_["max_bbox_shape"] = 300
         bbox = random_bbox(**cfg_)
 
     with pytest.raises(ValueError):
         cfg_ = cfg.copy()
-        cfg_['max_bbox_delta'] = 300
+        cfg_["max_bbox_delta"] = 300
         bbox = random_bbox(**cfg_)
 
     with pytest.raises(ValueError):
         cfg_ = cfg.copy()
-        cfg_['max_bbox_shape'] = 254
+        cfg_["max_bbox_shape"] = 254
         bbox = random_bbox(**cfg_)
 
     cfg_ = cfg.copy()
-    cfg_['max_bbox_delta'] = 1
+    cfg_["max_bbox_delta"] = 1
     bbox = random_bbox(**cfg_)
-    mask_bbox = bbox2mask(cfg['img_shape'], bbox)
+    mask_bbox = bbox2mask(cfg["img_shape"], bbox)
     assert mask_bbox.shape == (256, 256, 1)
 
 

@@ -37,35 +37,23 @@ class ExponentialMovingAverageHook(Hook):
             Default: 0.
     """
 
-    def __init__(self,
-                 module_keys,
-                 interp_mode='lerp',
-                 interp_cfg=None,
-                 interval=-1,
-                 start_iter=0):
+    def __init__(self, module_keys, interp_mode="lerp", interp_cfg=None, interval=-1, start_iter=0):
         super().__init__()
-        assert isinstance(module_keys, str) or mmcv.is_tuple_of(
-            module_keys, str)
-        self.module_keys = (module_keys, ) if isinstance(module_keys,
-                                                         str) else module_keys
+        assert isinstance(module_keys, str) or mmcv.is_tuple_of(module_keys, str)
+        self.module_keys = (module_keys,) if isinstance(module_keys, str) else module_keys
         # sanity check for the format of module keys
         for k in self.module_keys:
-            assert k.endswith(
-                '_ema'), 'You should give keys that end with "_ema".'
+            assert k.endswith("_ema"), 'You should give keys that end with "_ema".'
         self.interp_mode = interp_mode
-        self.interp_cfg = dict() if interp_cfg is None else deepcopy(
-            interp_cfg)
+        self.interp_cfg = dict() if interp_cfg is None else deepcopy(interp_cfg)
         self.interval = interval
         self.start_iter = start_iter
 
-        assert hasattr(
-            self, interp_mode
-        ), f'Currently, we do not support {self.interp_mode} for EMA.'
-        self.interp_func = partial(
-            getattr(self, interp_mode), **self.interp_cfg)
+        assert hasattr(self, interp_mode), f"Currently, we do not support {self.interp_mode} for EMA."
+        self.interp_func = partial(getattr(self, interp_mode), **self.interp_cfg)
 
     @staticmethod
-    def lerp(a, b, momentum=0.999, momentum_nontrainable=0., trainable=True):
+    def lerp(a, b, momentum=0.999, momentum_nontrainable=0.0, trainable=True):
         m = momentum if trainable else momentum_nontrainable
         return a + (b - a) * m
 
@@ -79,8 +67,7 @@ class ExponentialMovingAverageHook(Hook):
         if not self.every_n_iters(runner, self.interval):
             return
 
-        model = runner.model.module if is_module_wrapper(
-            runner.model) else runner.model
+        model = runner.model.module if is_module_wrapper(runner.model) else runner.model
 
         for key in self.module_keys:
             # get current ema states
@@ -94,20 +81,18 @@ class ExponentialMovingAverageHook(Hook):
                 if runner.iter < self.start_iter:
                     states_ema[k].data.copy_(v.data)
                 else:
-                    states_ema[k] = self.interp_func(
-                        v, states_ema[k], trainable=v.requires_grad).detach()
+                    states_ema[k] = self.interp_func(v, states_ema[k], trainable=v.requires_grad).detach()
             ema_net.load_state_dict(states_ema, strict=True)
 
     def before_run(self, runner):
-        model = runner.model.module if is_module_wrapper(
-            runner.model) else runner.model
+        model = runner.model.module if is_module_wrapper(runner.model) else runner.model
         # sanity check for ema model
         for k in self.module_keys:
             if not hasattr(model, k) and not hasattr(model, k[:-4]):
-                raise RuntimeError(
-                    f'Cannot find both {k[:-4]} and {k} network for EMA hook.')
+                raise RuntimeError(f"Cannot find both {k[:-4]} and {k} network for EMA hook.")
             if not hasattr(model, k) and hasattr(model, k[:-4]):
                 setattr(model, k, deepcopy(getattr(model, k[:-4])))
                 warnings.warn(
-                    f'We do not suggest construct and initialize EMA model {k}'
-                    ' in hook. You may explicitly define it by yourself.')
+                    f"We do not suggest construct and initialize EMA model {k}"
+                    " in hook. You may explicitly define it by yourself."
+                )

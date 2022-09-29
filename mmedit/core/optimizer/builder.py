@@ -40,7 +40,7 @@ def build_optimizers(model, cfgs):
             The initialized optimizers.
     """
     optimizers = {}
-    if hasattr(model, 'module'):
+    if hasattr(model, "module"):
         model = model.module
     # determine whether 'cfgs' has several dicts for optimizers
     is_dict_of_dict = True

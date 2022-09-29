@@ -9,8 +9,7 @@ def test_basicvsr_net():
     """Test BasicVSR."""
 
     # cpu
-    basicvsr = BasicVSRNet(
-        mid_channels=64, num_blocks=30, spynet_pretrained=None)
+    basicvsr = BasicVSRNet(mid_channels=64, num_blocks=30, spynet_pretrained=None)
     input_tensor = torch.rand(1, 5, 3, 64, 64)
     basicvsr.init_weights(pretrained=None)
     output = basicvsr(input_tensor)
@@ -18,8 +17,7 @@ def test_basicvsr_net():
 
     # gpu
     if torch.cuda.is_available():
-        basicvsr = BasicVSRNet(
-            mid_channels=64, num_blocks=30, spynet_pretrained=None).cuda()
+        basicvsr = BasicVSRNet(mid_channels=64, num_blocks=30, spynet_pretrained=None).cuda()
         input_tensor = torch.rand(1, 5, 3, 64, 64).cuda()
         basicvsr.init_weights(pretrained=None)
         output = basicvsr(input_tensor)

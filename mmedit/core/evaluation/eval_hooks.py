@@ -21,13 +21,12 @@ class EvalIterHook(Hook):
 
     def __init__(self, dataloader, interval=1, **eval_kwargs):
         if not isinstance(dataloader, DataLoader):
-            raise TypeError('dataloader must be a pytorch DataLoader, '
-                            f'but got { type(dataloader)}')
+            raise TypeError("dataloader must be a pytorch DataLoader, " f"but got { type(dataloader)}")
         self.dataloader = dataloader
         self.interval = interval
         self.eval_kwargs = eval_kwargs
-        self.save_image = self.eval_kwargs.pop('save_image', False)
-        self.save_path = self.eval_kwargs.pop('save_path', None)
+        self.save_image = self.eval_kwargs.pop("save_image", False)
+        self.save_path = self.eval_kwargs.pop("save_path", None)
 
     def after_train_iter(self, runner):
         """The behavior after each train iteration.
@@ -39,12 +38,10 @@ class EvalIterHook(Hook):
             return
         runner.log_buffer.clear()
         from mmedit.apis import single_gpu_test
+
         results = single_gpu_test(
-            runner.model,
-            self.dataloader,
-            save_image=self.save_image,
-            save_path=self.save_path,
-            iteration=runner.iter)
+            runner.model, self.dataloader, save_image=self.save_image, save_path=self.save_path, iteration=runner.iter
+        )
         self.evaluate(runner, results)
 
     def evaluate(self, runner, results):
@@ -54,8 +51,7 @@ class EvalIterHook(Hook):
             runner (``mmcv.runner.BaseRunner``): The runner.
             results (dict): Model forward results.
         """
-        eval_res = self.dataloader.dataset.evaluate(
-            results, logger=runner.logger, **self.eval_kwargs)
+        eval_res = self.dataloader.dataset.evaluate(results, logger=runner.logger, **self.eval_kwargs)
         for name, val in eval_res.items():
             runner.log_buffer.output[name] = val
         runner.log_buffer.ready = True
@@ -76,11 +72,7 @@ class DistEvalIterHook(EvalIterHook):
             save_path (str): The path to save image.
     """
 
-    def __init__(self,
-                 dataloader,
-                 interval=1,
-                 gpu_collect=False,
-                 **eval_kwargs):
+    def __init__(self, dataloader, interval=1, gpu_collect=False, **eval_kwargs):
         super().__init__(dataloader, interval, **eval_kwargs)
         self.gpu_collect = gpu_collect
 
@@ -94,14 +86,16 @@ class DistEvalIterHook(EvalIterHook):
             return
         runner.log_buffer.clear()
         from mmedit.apis import multi_gpu_test
+
         results = multi_gpu_test(
             runner.model,
             self.dataloader,
-            tmpdir=osp.join(runner.work_dir, '.eval_hook'),
+            tmpdir=osp.join(runner.work_dir, ".eval_hook"),
             gpu_collect=self.gpu_collect,
             save_image=self.save_image,
             save_path=self.save_path,
-            iteration=runner.iter)
+            iteration=runner.iter,
+        )
         if runner.rank == 0:
-            print('\n')
+            print("\n")
             self.evaluate(runner, results)

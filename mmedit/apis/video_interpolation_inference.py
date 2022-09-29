@@ -12,8 +12,8 @@ from mmcv.parallel import collate
 
 from mmedit.datasets.pipelines import Compose
 
-VIDEO_EXTENSIONS = ('.mp4', '.mov', '.avi')
-FILE_CLIENT = FileClient('disk')
+VIDEO_EXTENSIONS = (".mp4", ".mov", ".avi")
+FILE_CLIENT = FileClient("disk")
 
 
 def read_image(filepath):
@@ -26,8 +26,7 @@ def read_image(filepath):
         image (np.array): Image.
     """
     img_bytes = FILE_CLIENT.get(filepath)
-    image = mmcv.imfrombytes(
-        img_bytes, flag='color', channel_order='rgb', backend='pillow')
+    image = mmcv.imfrombytes(img_bytes, flag="color", channel_order="rgb", backend="pillow")
     return image
 
 
@@ -58,15 +57,17 @@ def read_frames(source, start_index, num_frames, from_video, end_index):
     return images
 
 
-def video_interpolation_inference(model,
-                                  input_dir,
-                                  output_dir,
-                                  start_idx=0,
-                                  end_idx=None,
-                                  batch_size=4,
-                                  fps_multiplier=0,
-                                  fps=0,
-                                  filename_tmpl='{:08d}.png'):
+def video_interpolation_inference(
+    model,
+    input_dir,
+    output_dir,
+    start_idx=0,
+    end_idx=None,
+    batch_size=4,
+    fps_multiplier=0,
+    fps=0,
+    filename_tmpl="{:08d}.png",
+):
     """Inference image with the model.
 
     Args:
@@ -94,9 +95,9 @@ def video_interpolation_inference(model,
     device = next(model.parameters()).device  # model device
 
     # build the data pipeline
-    if model.cfg.get('demo_pipeline', None):
+    if model.cfg.get("demo_pipeline", None):
         test_pipeline = model.cfg.demo_pipeline
-    elif model.cfg.get('test_pipeline', None):
+    elif model.cfg.get("test_pipeline", None):
         test_pipeline = model.cfg.test_pipeline
     else:
         test_pipeline = model.cfg.val_pipeline
@@ -104,10 +105,7 @@ def video_interpolation_inference(model,
     # remove the data loading pipeline
     tmp_pipeline = []
     for pipeline in test_pipeline:
-        if pipeline['type'] not in [
-                'GenerateSegmentIndices', 'LoadImageFromFileList',
-                'LoadImageFromFile'
-        ]:
+        if pipeline["type"] not in ["GenerateSegmentIndices", "LoadImageFromFileList", "LoadImageFromFile"]:
             tmp_pipeline.append(pipeline)
     test_pipeline = tmp_pipeline
 
@@ -123,7 +121,7 @@ def video_interpolation_inference(model,
         from_video = True
         h, w = source.height, source.width
         if fps_multiplier:
-            assert fps_multiplier > 0, '`fps_multiplier` cannot be negative'
+            assert fps_multiplier > 0, "`fps_multiplier` cannot be negative"
             output_fps = fps_multiplier * input_fps
         else:
             output_fps = fps if fps > 0 else input_fps * 2
@@ -141,7 +139,7 @@ def video_interpolation_inference(model,
     # check if the output is a video
     output_file_extension = os.path.splitext(output_dir)[1]
     if output_file_extension in VIDEO_EXTENSIONS:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         target = cv2.VideoWriter(output_dir, fourcc, output_fps, (w, h))
         to_video = True
     else:
@@ -151,29 +149,25 @@ def video_interpolation_inference(model,
 
     # calculate step args
     step_size = model.step_frames * batch_size
-    lenth_per_step = model.required_frames + model.step_frames * (
-        batch_size - 1)
+    lenth_per_step = model.required_frames + model.step_frames * (batch_size - 1)
     repeat_frame = model.required_frames - model.step_frames
 
-    prog_bar = mmcv.ProgressBar(
-        math.ceil(
-            (end_idx + step_size - lenth_per_step - start_idx) / step_size))
+    prog_bar = mmcv.ProgressBar(math.ceil((end_idx + step_size - lenth_per_step - start_idx) / step_size))
     output_index = start_idx
     for start_index in range(start_idx, end_idx, step_size):
-        images = read_frames(
-            source, start_index, lenth_per_step, from_video, end_index=end_idx)
+        images = read_frames(source, start_index, lenth_per_step, from_video, end_index=end_idx)
 
         # data prepare
         data = dict(inputs=images, inputs_path=None, key=input_dir)
         data = [test_pipeline(data)]
-        data = collate(data, samples_per_gpu=1)['inputs']
+        data = collate(data, samples_per_gpu=1)["inputs"]
         # data.shape: [1, t, c, h, w]
 
         # forward the model
         data = model.split_frames(data)
         input_tensors = data.clone().detach()
         with torch.no_grad():
-            output = model(data.to(device), test_mode=True)['output']
+            output = model(data.to(device), test_mode=True)["output"]
             if len(output.shape) == 4:
                 output = output.unsqueeze(1)
             output_tensors = output.cpu()
@@ -181,7 +175,7 @@ def video_interpolation_inference(model,
                 output_tensors = output_tensors.unsqueeze(1)
             result = model.merge_frames(input_tensors, output_tensors)
         if not start_idx == start_index:
-            result = result[0 - repeat_frame:]
+            result = result[0 - repeat_frame :]
         prog_bar.update()
 
         # save frames
@@ -190,8 +184,7 @@ def video_interpolation_inference(model,
                 target.write(frame)
         else:
             for frame in result:
-                save_path = osp.join(output_dir,
-                                     filename_tmpl.format(output_index))
+                save_path = osp.join(output_dir, filename_tmpl.format(output_index))
                 mmcv.imwrite(frame, save_path)
                 output_index += 1
 
@@ -199,6 +192,6 @@ def video_interpolation_inference(model,
             break
 
     print()
-    print(f'Output dir: {output_dir}')
+    print(f"Output dir: {output_dir}")
     if to_video:
         target.release()

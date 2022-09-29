@@ -15,19 +15,17 @@ _integer_types = (
     np.int_,
     np.uint,  # 32 or 64 bits
     np.longlong,
-    np.ulonglong)  # 64 bits
+    np.ulonglong,
+)  # 64 bits
 
-_integer_ranges = {
-    t: (np.iinfo(t).min, np.iinfo(t).max)
-    for t in _integer_types
-}
+_integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max) for t in _integer_types}
 
 dtype_range = {
     np.bool_: (False, True),
     np.bool8: (False, True),
     np.float16: (-1, 1),
     np.float32: (-1, 1),
-    np.float64: (-1, 1)
+    np.float64: (-1, 1),
 }
 dtype_range.update(_integer_ranges)
 
@@ -75,18 +73,20 @@ def adjust_gamma(image, gamma=1, gain=1):
         ndarray: Gamma corrected output image.
     """
     if np.any(image < 0):
-        raise ValueError('Image Correction methods work correctly only on '
-                         'images with non-negative values. Use '
-                         'skimage.exposure.rescale_intensity.')
+        raise ValueError(
+            "Image Correction methods work correctly only on "
+            "images with non-negative values. Use "
+            "skimage.exposure.rescale_intensity."
+        )
 
     dtype = image.dtype.type
 
     if gamma < 0:
-        raise ValueError('Gamma should be a non-negative real number.')
+        raise ValueError("Gamma should be a non-negative real number.")
 
     scale = float(dtype_limits(image, True)[1] - dtype_limits(image, True)[0])
 
-    out = ((image / scale)**gamma) * scale * gain
+    out = ((image / scale) ** gamma) * scale * gain
     return out.astype(dtype)
 
 
@@ -107,13 +107,13 @@ def random_choose_unknown(unknown, crop_size):
 
     # mask out the validate area for selecting the cropping center
     mask = np.zeros_like(unknown)
-    mask[delta_h:h - delta_h, delta_w:w - delta_w] = 1
+    mask[delta_h : h - delta_h, delta_w : w - delta_w] = 1
     if np.any(unknown & mask):
         center_h_list, center_w_list = np.where(unknown & mask)
     elif np.any(unknown):
         center_h_list, center_w_list = np.where(unknown)
     else:
-        print_log('No unknown pixels found!', level=logging.WARNING)
+        print_log("No unknown pixels found!", level=logging.WARNING)
         center_h_list = [center_h]
         center_w_list = [center_w]
     num_unknowns = len(center_h_list)
@@ -129,7 +129,7 @@ def random_choose_unknown(unknown, crop_size):
 
 
 def make_coord(shape, ranges=None, flatten=True):
-    """ Make coordinates at grid centers.
+    """Make coordinates at grid centers.
 
     Args:
         shape (tuple): shape of image.

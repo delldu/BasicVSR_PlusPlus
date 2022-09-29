@@ -33,20 +33,16 @@ class MaskConvModule(ConvModule):
             sequence of "conv", "norm" and "act". Examples are
             ("conv", "norm", "act") and ("act", "conv", "norm").
     """
-    supported_conv_list = ['PConv']
+
+    supported_conv_list = ["PConv"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        assert self.conv_cfg['type'] in self.supported_conv_list
+        assert self.conv_cfg["type"] in self.supported_conv_list
 
         self.init_weights()
 
-    def forward(self,
-                x,
-                mask=None,
-                activate=True,
-                norm=True,
-                return_mask=True):
+    def forward(self, x, mask=None, activate=True, norm=True, return_mask=True):
         """Forward function for partial conv2d.
 
         Args:
@@ -68,18 +64,17 @@ class MaskConvModule(ConvModule):
                     and `return_mask` is True.
         """
         for layer in self.order:
-            if layer == 'conv':
+            if layer == "conv":
                 if self.with_explicit_padding:
                     x = self.padding_layer(x)
                     mask = self.padding_layer(mask)
                 if return_mask:
-                    x, updated_mask = self.conv(
-                        x, mask, return_mask=return_mask)
+                    x, updated_mask = self.conv(x, mask, return_mask=return_mask)
                 else:
                     x = self.conv(x, mask, return_mask=False)
-            elif layer == 'norm' and norm and self.with_norm:
+            elif layer == "norm" and norm and self.with_norm:
                 x = self.norm(x)
-            elif layer == 'act' and activate and self.with_activation:
+            elif layer == "act" and activate and self.with_activation:
                 x = self.activate(x)
 
         if return_mask:

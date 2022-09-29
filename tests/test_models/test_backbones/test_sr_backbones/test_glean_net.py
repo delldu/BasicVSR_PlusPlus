@@ -2,12 +2,10 @@
 import pytest
 import torch
 
-from mmedit.models.backbones.sr_backbones.glean_styleganv2 import \
-    GLEANStyleGANv2
+from mmedit.models.backbones.sr_backbones.glean_styleganv2 import GLEANStyleGANv2
 
 
 class TestGLEANNet:
-
     @classmethod
     def setup_class(cls):
         cls.default_cfg = dict(in_size=16, out_size=256, style_channels=512)
@@ -32,7 +30,7 @@ class TestGLEANNet:
         with pytest.raises(ValueError):
             glean = GLEANStyleGANv2(**self.size_cfg)
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason='requires cuda')
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
     def test_glean_styleganv2_cuda(self):
         # test default config
         glean = GLEANStyleGANv2(**self.default_cfg).cuda()

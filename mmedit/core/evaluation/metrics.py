@@ -14,9 +14,10 @@ from .metric_utils import gauss_gradient
 def sad(alpha, trimap, pred_alpha):
     if alpha.ndim != 2 or trimap.ndim != 2 or pred_alpha.ndim != 2:
         raise ValueError(
-            'input alpha, trimap and pred_alpha should has two dimensions, '
-            f'alpha {alpha.shape}, please check their shape: '
-            f'trimap {trimap.shape}, pred_alpha {pred_alpha.shape}')
+            "input alpha, trimap and pred_alpha should has two dimensions, "
+            f"alpha {alpha.shape}, please check their shape: "
+            f"trimap {trimap.shape}, pred_alpha {pred_alpha.shape}"
+        )
     assert (pred_alpha[trimap == 0] == 0).all()
     assert (pred_alpha[trimap == 255] == 255).all()
     alpha = alpha.astype(np.float64) / 255
@@ -28,16 +29,17 @@ def sad(alpha, trimap, pred_alpha):
 def mse(alpha, trimap, pred_alpha):
     if alpha.ndim != 2 or trimap.ndim != 2 or pred_alpha.ndim != 2:
         raise ValueError(
-            'input alpha, trimap and pred_alpha should has two dimensions, '
-            f'alpha {alpha.shape}, please check their shape: '
-            f'trimap {trimap.shape}, pred_alpha {pred_alpha.shape}')
+            "input alpha, trimap and pred_alpha should has two dimensions, "
+            f"alpha {alpha.shape}, please check their shape: "
+            f"trimap {trimap.shape}, pred_alpha {pred_alpha.shape}"
+        )
     assert (pred_alpha[trimap == 0] == 0).all()
     assert (pred_alpha[trimap == 255] == 255).all()
     alpha = alpha.astype(np.float64) / 255
     pred_alpha = pred_alpha.astype(np.float64) / 255
     weight_sum = (trimap == 128).sum()
     if weight_sum != 0:
-        mse_result = ((pred_alpha - alpha)**2).sum() / weight_sum
+        mse_result = ((pred_alpha - alpha) ** 2).sum() / weight_sum
     else:
         mse_result = 0
     return mse_result
@@ -54,25 +56,23 @@ def gradient_error(alpha, trimap, pred_alpha, sigma=1.4):
     """
     if alpha.ndim != 2 or trimap.ndim != 2 or pred_alpha.ndim != 2:
         raise ValueError(
-            'input alpha, trimap and pred_alpha should has two dimensions, '
-            f'alpha {alpha.shape}, please check their shape: '
-            f'trimap {trimap.shape}, pred_alpha {pred_alpha.shape}')
-    if not ((pred_alpha[trimap == 0] == 0).all() and
-            (pred_alpha[trimap == 255] == 255).all()):
-        raise ValueError(
-            'pred_alpha should be masked by trimap before evaluation')
+            "input alpha, trimap and pred_alpha should has two dimensions, "
+            f"alpha {alpha.shape}, please check their shape: "
+            f"trimap {trimap.shape}, pred_alpha {pred_alpha.shape}"
+        )
+    if not ((pred_alpha[trimap == 0] == 0).all() and (pred_alpha[trimap == 255] == 255).all()):
+        raise ValueError("pred_alpha should be masked by trimap before evaluation")
     alpha = alpha.astype(np.float64)
     pred_alpha = pred_alpha.astype(np.float64)
     alpha_normed = np.zeros_like(alpha)
     pred_alpha_normed = np.zeros_like(pred_alpha)
-    cv2.normalize(alpha, alpha_normed, 1., 0., cv2.NORM_MINMAX)
-    cv2.normalize(pred_alpha, pred_alpha_normed, 1., 0., cv2.NORM_MINMAX)
+    cv2.normalize(alpha, alpha_normed, 1.0, 0.0, cv2.NORM_MINMAX)
+    cv2.normalize(pred_alpha, pred_alpha_normed, 1.0, 0.0, cv2.NORM_MINMAX)
 
     alpha_grad = gauss_gradient(alpha_normed, sigma).astype(np.float32)
-    pred_alpha_grad = gauss_gradient(pred_alpha_normed,
-                                     sigma).astype(np.float32)
+    pred_alpha_grad = gauss_gradient(pred_alpha_normed, sigma).astype(np.float32)
 
-    grad_loss = ((alpha_grad - pred_alpha_grad)**2 * (trimap == 128)).sum()
+    grad_loss = ((alpha_grad - pred_alpha_grad) ** 2 * (trimap == 128)).sum()
     # same as SAD, divide by 1000 to reduce the magnitude of the result
     return grad_loss / 1000
 
@@ -92,13 +92,12 @@ def connectivity(alpha, trimap, pred_alpha, step=0.1):
     """
     if alpha.ndim != 2 or trimap.ndim != 2 or pred_alpha.ndim != 2:
         raise ValueError(
-            'input alpha, trimap and pred_alpha should has two dimensions, '
-            f'alpha {alpha.shape}, please check their shape: '
-            f'trimap {trimap.shape}, pred_alpha {pred_alpha.shape}')
-    if not ((pred_alpha[trimap == 0] == 0).all() and
-            (pred_alpha[trimap == 255] == 255).all()):
-        raise ValueError(
-            'pred_alpha should be masked by trimap before evaluation')
+            "input alpha, trimap and pred_alpha should has two dimensions, "
+            f"alpha {alpha.shape}, please check their shape: "
+            f"trimap {trimap.shape}, pred_alpha {pred_alpha.shape}"
+        )
+    if not ((pred_alpha[trimap == 0] == 0).all() and (pred_alpha[trimap == 255] == 255).all()):
+        raise ValueError("pred_alpha should be masked by trimap before evaluation")
     alpha = alpha.astype(np.float32) / 255
     pred_alpha = pred_alpha.astype(np.float32) / 255
 
@@ -110,8 +109,7 @@ def connectivity(alpha, trimap, pred_alpha, step=0.1):
         intersection = (alpha_thresh & pred_alpha_thresh).astype(np.uint8)
 
         # connected components
-        _, output, stats, _ = cv2.connectedComponentsWithStats(
-            intersection, connectivity=4)
+        _, output, stats, _ = cv2.connectedComponentsWithStats(intersection, connectivity=4)
         # start from 1 in dim 0 to exclude background
         size = stats[1:, -1]
 
@@ -132,13 +130,12 @@ def connectivity(alpha, trimap, pred_alpha, step=0.1):
     alpha_phi = 1 - alpha_diff * (alpha_diff >= 0.15)
     pred_alpha_phi = 1 - pred_alpha_diff * (pred_alpha_diff >= 0.15)
 
-    connectivity_error = np.sum(
-        np.abs(alpha_phi - pred_alpha_phi) * (trimap == 128))
+    connectivity_error = np.sum(np.abs(alpha_phi - pred_alpha_phi) * (trimap == 128))
     # same as SAD, divide by 1000 to reduce the magnitude of the result
     return connectivity_error / 1000
 
 
-def reorder_image(img, input_order='HWC'):
+def reorder_image(img, input_order="HWC"):
     """Reorder images to 'HWC' order.
 
     If the input_order is (h, w), return (h, w, 1);
@@ -155,19 +152,17 @@ def reorder_image(img, input_order='HWC'):
         ndarray: reordered image.
     """
 
-    if input_order not in ['HWC', 'CHW']:
-        raise ValueError(
-            f'Wrong input_order {input_order}. Supported input_orders are '
-            '"HWC" and "CHW"')
+    if input_order not in ["HWC", "CHW"]:
+        raise ValueError(f"Wrong input_order {input_order}. Supported input_orders are " '"HWC" and "CHW"')
     if len(img.shape) == 2:
         img = img[..., None]
         return img
-    if input_order == 'CHW':
+    if input_order == "CHW":
         img = img.transpose(1, 2, 0)
     return img
 
 
-def psnr(img1, img2, crop_border=0, input_order='HWC', convert_to=None):
+def psnr(img1, img2, crop_border=0, input_order="HWC", convert_to=None):
     """Calculate PSNR (Peak Signal-to-Noise Ratio).
 
     Ref: https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio
@@ -188,31 +183,27 @@ def psnr(img1, img2, crop_border=0, input_order='HWC', convert_to=None):
         float: psnr result.
     """
 
-    assert img1.shape == img2.shape, (
-        f'Image shapes are different: {img1.shape}, {img2.shape}.')
-    if input_order not in ['HWC', 'CHW']:
-        raise ValueError(
-            f'Wrong input_order {input_order}. Supported input_orders are '
-            '"HWC" and "CHW"')
+    assert img1.shape == img2.shape, f"Image shapes are different: {img1.shape}, {img2.shape}."
+    if input_order not in ["HWC", "CHW"]:
+        raise ValueError(f"Wrong input_order {input_order}. Supported input_orders are " '"HWC" and "CHW"')
     img1 = reorder_image(img1, input_order=input_order)
     img2 = reorder_image(img2, input_order=input_order)
 
     img1, img2 = img1.astype(np.float32), img2.astype(np.float32)
-    if isinstance(convert_to, str) and convert_to.lower() == 'y':
-        img1 = mmcv.bgr2ycbcr(img1 / 255., y_only=True) * 255.
-        img2 = mmcv.bgr2ycbcr(img2 / 255., y_only=True) * 255.
+    if isinstance(convert_to, str) and convert_to.lower() == "y":
+        img1 = mmcv.bgr2ycbcr(img1 / 255.0, y_only=True) * 255.0
+        img2 = mmcv.bgr2ycbcr(img2 / 255.0, y_only=True) * 255.0
     elif convert_to is not None:
-        raise ValueError('Wrong color model. Supported values are '
-                         '"Y" and None.')
+        raise ValueError("Wrong color model. Supported values are " '"Y" and None.')
 
     if crop_border != 0:
         img1 = img1[crop_border:-crop_border, crop_border:-crop_border, None]
         img2 = img2[crop_border:-crop_border, crop_border:-crop_border, None]
 
-    mse_value = np.mean((img1 - img2)**2)
+    mse_value = np.mean((img1 - img2) ** 2)
     if mse_value == 0:
-        return float('inf')
-    return 20. * np.log10(255. / np.sqrt(mse_value))
+        return float("inf")
+    return 20.0 * np.log10(255.0 / np.sqrt(mse_value))
 
 
 def _ssim(img1, img2):
@@ -227,8 +218,8 @@ def _ssim(img1, img2):
         float: ssim result.
     """
 
-    C1 = (0.01 * 255)**2
-    C2 = (0.03 * 255)**2
+    C1 = (0.01 * 255) ** 2
+    C2 = (0.03 * 255) ** 2
 
     img1 = img1.astype(np.float64)
     img2 = img2.astype(np.float64)
@@ -237,20 +228,18 @@ def _ssim(img1, img2):
 
     mu1 = cv2.filter2D(img1, -1, window)[5:-5, 5:-5]
     mu2 = cv2.filter2D(img2, -1, window)[5:-5, 5:-5]
-    mu1_sq = mu1**2
-    mu2_sq = mu2**2
+    mu1_sq = mu1 ** 2
+    mu2_sq = mu2 ** 2
     mu1_mu2 = mu1 * mu2
-    sigma1_sq = cv2.filter2D(img1**2, -1, window)[5:-5, 5:-5] - mu1_sq
-    sigma2_sq = cv2.filter2D(img2**2, -1, window)[5:-5, 5:-5] - mu2_sq
+    sigma1_sq = cv2.filter2D(img1 ** 2, -1, window)[5:-5, 5:-5] - mu1_sq
+    sigma2_sq = cv2.filter2D(img2 ** 2, -1, window)[5:-5, 5:-5] - mu2_sq
     sigma12 = cv2.filter2D(img1 * img2, -1, window)[5:-5, 5:-5] - mu1_mu2
 
-    ssim_map = ((2 * mu1_mu2 + C1) *
-                (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) *
-                                       (sigma1_sq + sigma2_sq + C2))
+    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
     return ssim_map.mean()
 
 
-def ssim(img1, img2, crop_border=0, input_order='HWC', convert_to=None):
+def ssim(img1, img2, crop_border=0, input_order="HWC", convert_to=None):
     """Calculate SSIM (structural similarity).
 
     Ref:
@@ -278,24 +267,20 @@ def ssim(img1, img2, crop_border=0, input_order='HWC', convert_to=None):
         float: ssim result.
     """
 
-    assert img1.shape == img2.shape, (
-        f'Image shapes are different: {img1.shape}, {img2.shape}.')
-    if input_order not in ['HWC', 'CHW']:
-        raise ValueError(
-            f'Wrong input_order {input_order}. Supported input_orders are '
-            '"HWC" and "CHW"')
+    assert img1.shape == img2.shape, f"Image shapes are different: {img1.shape}, {img2.shape}."
+    if input_order not in ["HWC", "CHW"]:
+        raise ValueError(f"Wrong input_order {input_order}. Supported input_orders are " '"HWC" and "CHW"')
     img1 = reorder_image(img1, input_order=input_order)
     img2 = reorder_image(img2, input_order=input_order)
 
-    if isinstance(convert_to, str) and convert_to.lower() == 'y':
+    if isinstance(convert_to, str) and convert_to.lower() == "y":
         img1, img2 = img1.astype(np.float32), img2.astype(np.float32)
-        img1 = mmcv.bgr2ycbcr(img1 / 255., y_only=True) * 255.
-        img2 = mmcv.bgr2ycbcr(img2 / 255., y_only=True) * 255.
+        img1 = mmcv.bgr2ycbcr(img1 / 255.0, y_only=True) * 255.0
+        img2 = mmcv.bgr2ycbcr(img2 / 255.0, y_only=True) * 255.0
         img1 = np.expand_dims(img1, axis=2)
         img2 = np.expand_dims(img2, axis=2)
     elif convert_to is not None:
-        raise ValueError('Wrong color model. Supported values are '
-                         '"Y" and None')
+        raise ValueError("Wrong color model. Supported values are " '"Y" and None')
 
     if crop_border != 0:
         img1 = img1[crop_border:-crop_border, crop_border:-crop_border, None]
@@ -316,15 +301,16 @@ class L1Evaluation:
     """
 
     def __call__(self, data_dict):
-        gt = data_dict['gt_img']
-        if 'fake_img' in data_dict:
-            pred = data_dict.get('fake_img')
+        gt = data_dict["gt_img"]
+        if "fake_img" in data_dict:
+            pred = data_dict.get("fake_img")
         else:
-            pred = data_dict.get('fake_res')
-        mask = data_dict.get('mask', None)
+            pred = data_dict.get("fake_res")
+        mask = data_dict.get("mask", None)
 
         from mmedit.models.losses.pixelwise_loss import l1_loss
-        l1_error = l1_loss(pred, gt, weight=mask, reduction='mean')
+
+        l1_error = l1_loss(pred, gt, weight=mask, reduction="mean")
 
         return l1_error
 
@@ -342,16 +328,14 @@ def estimate_aggd_param(block):
     block = block.flatten()
     gam = np.arange(0.2, 10.001, 0.001)  # len = 9801
     gam_reciprocal = np.reciprocal(gam)
-    r_gam = np.square(gamma(gam_reciprocal * 2)) / (
-        gamma(gam_reciprocal) * gamma(gam_reciprocal * 3))
+    r_gam = np.square(gamma(gam_reciprocal * 2)) / (gamma(gam_reciprocal) * gamma(gam_reciprocal * 3))
 
-    left_std = np.sqrt(np.mean(block[block < 0]**2))
-    right_std = np.sqrt(np.mean(block[block > 0]**2))
+    left_std = np.sqrt(np.mean(block[block < 0] ** 2))
+    right_std = np.sqrt(np.mean(block[block > 0] ** 2))
     gammahat = left_std / right_std
-    rhat = (np.mean(np.abs(block)))**2 / np.mean(block**2)
-    rhatnorm = (rhat * (gammahat**3 + 1) *
-                (gammahat + 1)) / ((gammahat**2 + 1)**2)
-    array_position = np.argmin((r_gam - rhatnorm)**2)
+    rhat = (np.mean(np.abs(block))) ** 2 / np.mean(block ** 2)
+    rhatnorm = (rhat * (gammahat ** 3 + 1) * (gammahat + 1)) / ((gammahat ** 2 + 1) ** 2)
+    array_position = np.argmin((r_gam - rhatnorm) ** 2)
 
     alpha = gam[array_position]
     beta_l = left_std * np.sqrt(gamma(1 / alpha) / gamma(3 / alpha))
@@ -385,12 +369,7 @@ def compute_feature(block):
     return feat
 
 
-def niqe_core(img,
-              mu_pris_param,
-              cov_pris_param,
-              gaussian_window,
-              block_size_h=96,
-              block_size_w=96):
+def niqe_core(img, mu_pris_param, cov_pris_param, gaussian_window, block_size_h=96, block_size_w=96):
     """Calculate NIQE (Natural Image Quality Evaluator) metric.
 
     Ref: Making a "Completely Blind" Image Quality Analyzer.
@@ -423,16 +402,13 @@ def niqe_core(img,
     h, w = img.shape
     num_block_h = math.floor(h / block_size_h)
     num_block_w = math.floor(w / block_size_w)
-    img = img[0:num_block_h * block_size_h, 0:num_block_w * block_size_w]
+    img = img[0 : num_block_h * block_size_h, 0 : num_block_w * block_size_w]
 
     distparam = []  # dist param is actually the multiscale features
     for scale in (1, 2):  # perform on two scales (1, 2)
-        mu = convolve(img, gaussian_window, mode='nearest')
+        mu = convolve(img, gaussian_window, mode="nearest")
 
-        sigma = np.sqrt(
-            np.abs(
-                convolve(np.square(img), gaussian_window, mode='nearest') -
-                np.square(mu)))
+        sigma = np.sqrt(np.abs(convolve(np.square(img), gaussian_window, mode="nearest") - np.square(mu)))
         # normalize, as in Eq. 1 in the paper
         img_nomalized = (img - mu) / (sigma + 1)
 
@@ -440,11 +416,10 @@ def niqe_core(img,
         for idx_w in range(num_block_w):
             for idx_h in range(num_block_h):
                 # process each block
-                block = img_nomalized[idx_h * block_size_h //
-                                      scale:(idx_h + 1) * block_size_h //
-                                      scale, idx_w * block_size_w //
-                                      scale:(idx_w + 1) * block_size_w //
-                                      scale]
+                block = img_nomalized[
+                    idx_h * block_size_h // scale : (idx_h + 1) * block_size_h // scale,
+                    idx_w * block_size_w // scale : (idx_w + 1) * block_size_w // scale,
+                ]
                 feat.append(compute_feature(block))
 
         distparam.append(np.array(feat))
@@ -452,7 +427,7 @@ def niqe_core(img,
         # matlab-like bicubic downsample with anti-aliasing
         if scale == 1:
             resize = MATLABLikeResize(keys=None, scale=0.5)
-            img = resize._resize(img[:, :, np.newaxis] / 255.)[:, :, 0] * 255.
+            img = resize._resize(img[:, :, np.newaxis] / 255.0)[:, :, 0] * 255.0
 
     distparam = np.concatenate(distparam, axis=1)
 
@@ -464,13 +439,13 @@ def niqe_core(img,
     # compute niqe quality, Eq. 10 in the paper
     invcov_param = np.linalg.pinv((cov_pris_param + cov_distparam) / 2)
     quality = np.matmul(
-        np.matmul((mu_pris_param - mu_distparam), invcov_param),
-        np.transpose((mu_pris_param - mu_distparam)))
+        np.matmul((mu_pris_param - mu_distparam), invcov_param), np.transpose((mu_pris_param - mu_distparam))
+    )
 
     return np.squeeze(np.sqrt(quality))
 
 
-def niqe(img, crop_border, input_order='HWC', convert_to='y'):
+def niqe(img, crop_border, input_order="HWC", convert_to="y"):
     """Calculate NIQE (Natural Image Quality Evaluator) metric.
 
     Ref: Making a "Completely Blind" Image Quality Analyzer.
@@ -498,18 +473,18 @@ def niqe(img, crop_border, input_order='HWC', convert_to='y'):
     """
 
     # we use the official params estimated from the pristine dataset.
-    niqe_pris_params = np.load('mmedit/core/evaluation/niqe_pris_params.npz')
-    mu_pris_param = niqe_pris_params['mu_pris_param']
-    cov_pris_param = niqe_pris_params['cov_pris_param']
-    gaussian_window = niqe_pris_params['gaussian_window']
+    niqe_pris_params = np.load("mmedit/core/evaluation/niqe_pris_params.npz")
+    mu_pris_param = niqe_pris_params["mu_pris_param"]
+    cov_pris_param = niqe_pris_params["cov_pris_param"]
+    gaussian_window = niqe_pris_params["gaussian_window"]
 
     img = img.astype(np.float32)
-    if input_order != 'HW':
+    if input_order != "HW":
         img = reorder_image(img, input_order=input_order)
-        if convert_to == 'y':
-            img = mmcv.bgr2ycbcr(img / 255., y_only=True) * 255.
-        elif convert_to == 'gray':
-            img = mmcv.bgr2gray(img / 255., cv2.COLOR_BGR2GRAY) * 255.
+        if convert_to == "y":
+            img = mmcv.bgr2ycbcr(img / 255.0, y_only=True) * 255.0
+        elif convert_to == "gray":
+            img = mmcv.bgr2gray(img / 255.0, cv2.COLOR_BGR2GRAY) * 255.0
         img = np.squeeze(img)
 
     if crop_border != 0:
@@ -518,7 +493,6 @@ def niqe(img, crop_border, input_order='HWC', convert_to='y'):
     # round to follow official implementation
     img = img.round()
 
-    niqe_result = niqe_core(img, mu_pris_param, cov_pris_param,
-                            gaussian_window)
+    niqe_result = niqe_core(img, mu_pris_param, cov_pris_param, gaussian_window)
 
     return niqe_result

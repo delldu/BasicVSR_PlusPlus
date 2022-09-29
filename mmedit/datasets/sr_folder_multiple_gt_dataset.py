@@ -50,14 +50,7 @@ class SRFolderMultipleGTDataset(BaseSRDataset):
             Default: `True`.
     """
 
-    def __init__(self,
-                 lq_folder,
-                 gt_folder,
-                 pipeline,
-                 scale,
-                 ann_file=None,
-                 num_input_frames=None,
-                 test_mode=True):
+    def __init__(self, lq_folder, gt_folder, pipeline, scale, ann_file=None, num_input_frames=None, test_mode=True):
         super().__init__(pipeline, scale, test_mode)
 
         self.lq_folder = str(lq_folder)
@@ -65,8 +58,7 @@ class SRFolderMultipleGTDataset(BaseSRDataset):
         self.ann_file = ann_file
 
         if num_input_frames is not None and num_input_frames <= 0:
-            raise ValueError('"num_input_frames" must be None or positive, '
-                             f'but got {num_input_frames}.')
+            raise ValueError('"num_input_frames" must be None or positive, ' f"but got {num_input_frames}.")
         self.num_input_frames = num_input_frames
 
         self.data_infos = self.load_annotations()
@@ -76,7 +68,7 @@ class SRFolderMultipleGTDataset(BaseSRDataset):
 
         ann_list = mmcv.list_from_file(self.ann_file)
         for ann in ann_list:
-            key, sequence_length = ann.strip().split(' ')
+            key, sequence_length = ann.strip().split(" ")
             if self.num_input_frames is None:
                 num_input_frames = sequence_length
             else:
@@ -87,7 +79,9 @@ class SRFolderMultipleGTDataset(BaseSRDataset):
                     gt_path=self.gt_folder,
                     key=key,
                     num_input_frames=int(num_input_frames),
-                    sequence_length=int(sequence_length)))
+                    sequence_length=int(sequence_length),
+                )
+            )
 
         return data_infos
 
@@ -101,10 +95,10 @@ class SRFolderMultipleGTDataset(BaseSRDataset):
         if self.ann_file:
             return self._load_annotations_from_file()
 
-        sequences = sorted(glob.glob(osp.join(self.lq_folder, '*')))
+        sequences = sorted(glob.glob(osp.join(self.lq_folder, "*")))
         data_infos = []
         for sequence in sequences:
-            sequence_length = len(glob.glob(osp.join(sequence, '*.png')))
+            sequence_length = len(glob.glob(osp.join(sequence, "*.png")))
             if self.num_input_frames is None:
                 num_input_frames = sequence_length
             else:
@@ -113,8 +107,10 @@ class SRFolderMultipleGTDataset(BaseSRDataset):
                 dict(
                     lq_path=self.lq_folder,
                     gt_path=self.gt_folder,
-                    key=sequence.replace(f'{self.lq_folder}{os.sep}', ''),
+                    key=sequence.replace(f"{self.lq_folder}{os.sep}", ""),
                     num_input_frames=num_input_frames,
-                    sequence_length=sequence_length))
+                    sequence_length=sequence_length,
+                )
+            )
 
         return data_infos

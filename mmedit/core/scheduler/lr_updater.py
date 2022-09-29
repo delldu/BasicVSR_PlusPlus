@@ -47,6 +47,5 @@ class LinearLrUpdaterHook(LrUpdaterHook):
             return base_lr
 
         # Before 'start', fix lr; After 'start', linearly update lr.
-        factor = (max(0, progress - self.start) // self.interval) / (
-            (max_progress - self.start) // self.interval)
+        factor = (max(0, progress - self.start) // self.interval) / ((max_progress - self.start) // self.interval)
         return base_lr + (self.target_lr - base_lr) * factor

@@ -8,24 +8,17 @@ from .separable_conv_module import DepthwiseSeparableConvModule
 
 
 class ASPPPooling(nn.Sequential):
-
     def __init__(self, in_channels, out_channels, conv_cfg, norm_cfg, act_cfg):
         super().__init__(
             nn.AdaptiveAvgPool2d(1),
-            ConvModule(
-                in_channels,
-                out_channels,
-                1,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg))
+            ConvModule(in_channels, out_channels, 1, conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg),
+        )
 
     def forward(self, x):
         size = x.shape[-2:]
         for mod in self:
             x = mod(x)
-        return F.interpolate(
-            x, size=size, mode='bilinear', align_corners=False)
+        return F.interpolate(x, size=size, mode="bilinear", align_corners=False)
 
 
 class ASPP(nn.Module):
@@ -56,15 +49,17 @@ class ASPP(nn.Module):
             separable conv which is faster. Default: False.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels=256,
-                 mid_channels=256,
-                 dilations=(12, 24, 36),
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU'),
-                 separable_conv=False):
+    def __init__(
+        self,
+        in_channels,
+        out_channels=256,
+        mid_channels=256,
+        dilations=(12, 24, 36),
+        conv_cfg=None,
+        norm_cfg=dict(type="BN"),
+        act_cfg=dict(type="ReLU"),
+        separable_conv=False,
+    ):
         super().__init__()
 
         if separable_conv:
@@ -73,14 +68,7 @@ class ASPP(nn.Module):
             conv_module = ConvModule
 
         modules = []
-        modules.append(
-            ConvModule(
-                in_channels,
-                mid_channels,
-                1,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg))
+        modules.append(ConvModule(in_channels, mid_channels, 1, conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg))
 
         for dilation in dilations:
             modules.append(
@@ -92,22 +80,18 @@ class ASPP(nn.Module):
                     dilation=dilation,
                     conv_cfg=conv_cfg,
                     norm_cfg=norm_cfg,
-                    act_cfg=act_cfg))
+                    act_cfg=act_cfg,
+                )
+            )
 
-        modules.append(
-            ASPPPooling(in_channels, mid_channels, conv_cfg, norm_cfg,
-                        act_cfg))
+        modules.append(ASPPPooling(in_channels, mid_channels, conv_cfg, norm_cfg, act_cfg))
 
         self.convs = nn.ModuleList(modules)
 
         self.project = nn.Sequential(
-            ConvModule(
-                5 * mid_channels,
-                out_channels,
-                1,
-                conv_cfg=conv_cfg,
-                norm_cfg=norm_cfg,
-                act_cfg=act_cfg), nn.Dropout(0.5))
+            ConvModule(5 * mid_channels, out_channels, 1, conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg),
+            nn.Dropout(0.5),
+        )
 
     def forward(self, x):
         """Forward function for ASPP module.

@@ -17,10 +17,7 @@ def get_size_from_scale(input_size, scale_factor):
         list[int]: The size of the output image.
     """
 
-    output_shape = [
-        int(np.ceil(scale * shape))
-        for (scale, shape) in zip(scale_factor, input_size)
-    ]
+    output_shape = [int(np.ceil(scale * shape)) for (scale, shape) in zip(scale_factor, input_size)]
 
     return output_shape
 
@@ -36,16 +33,13 @@ def get_scale_from_size(input_size, output_size):
         list[float]: The scale factor of each dimension.
     """
 
-    scale = [
-        1.0 * output_shape / input_shape
-        for (input_shape, output_shape) in zip(input_size, output_size)
-    ]
+    scale = [1.0 * output_shape / input_shape for (input_shape, output_shape) in zip(input_size, output_size)]
 
     return scale
 
 
 def _cubic(x):
-    """ Cubic function.
+    """Cubic function.
 
     Args:
         x (ndarray): The distance from the center position.
@@ -57,20 +51,19 @@ def _cubic(x):
 
     x = np.array(x, dtype=np.float32)
     x_abs = np.abs(x)
-    x_abs_sq = x_abs**2
+    x_abs_sq = x_abs ** 2
     x_abs_cu = x_abs_sq * x_abs
 
     # if |x| <= 1: y = 1.5|x|^3 - 2.5|x|^2 + 1
     # if 1 < |x| <= 2: -0.5|x|^3 + 2.5|x|^2 - 4|x| + 2
-    f = (1.5 * x_abs_cu - 2.5 * x_abs_sq + 1) * (x_abs <= 1) + (
-        -0.5 * x_abs_cu + 2.5 * x_abs_sq - 4 * x_abs + 2) * ((1 < x_abs) &
-                                                             (x_abs <= 2))
+    f = (1.5 * x_abs_cu - 2.5 * x_abs_sq + 1) * (x_abs <= 1) + (-0.5 * x_abs_cu + 2.5 * x_abs_sq - 4 * x_abs + 2) * (
+        (1 < x_abs) & (x_abs <= 2)
+    )
 
     return f
 
 
-def get_weights_indices(input_length, output_length, scale, kernel,
-                        kernel_width):
+def get_weights_indices(input_length, output_length, scale, kernel, kernel_width):
     """Get weights and indices for interpolation.
 
     Args:
@@ -113,9 +106,7 @@ def get_weights_indices(input_length, output_length, scale, kernel,
     weights = weights / np.sum(weights, axis=1)[:, np.newaxis, ...]
 
     # remove all-zero columns
-    aux = np.concatenate(
-        (np.arange(input_length), np.arange(input_length - 1, -1,
-                                            step=-1))).astype(np.int32)
+    aux = np.concatenate((np.arange(input_length), np.arange(input_length - 1, -1, step=-1))).astype(np.int32)
     indices = aux[np.mod(indices, aux.size)]
     ind2store = np.nonzero(np.any(weights, axis=0))
     weights = weights[:, ind2store]
@@ -169,39 +160,34 @@ def resize_along_dim(img_in, weights, indices, dim):
 class MATLABLikeResize:
     """Resize the input image using MATLAB-like downsampling.
 
-        Currently support bicubic interpolation only. Note that the output of
-        this function is slightly different from the official MATLAB function.
+    Currently support bicubic interpolation only. Note that the output of
+    this function is slightly different from the official MATLAB function.
 
-        Required keys are the keys in attribute "keys". Added or modified keys
-        are "scale" and "output_shape", and the keys in attribute "keys".
+    Required keys are the keys in attribute "keys". Added or modified keys
+    are "scale" and "output_shape", and the keys in attribute "keys".
 
-        Args:
-            keys (list[str]): A list of keys whose values are modified.
-            scale (float | None, optional): The scale factor of the resize
-                operation. If None, it will be determined by output_shape.
-                Default: None.
-            output_shape (tuple(int) | None, optional): The size of the output
-                image. If None, it will be determined by scale. Note that if
-                scale is provided, output_shape will not be used.
-                Default: None.
-            kernel (str, optional): The kernel for the resize operation.
-                Currently support 'bicubic' only. Default: 'bicubic'.
-            kernel_width (float): The kernel width. Currently support 4.0 only.
-                Default: 4.0.
+    Args:
+        keys (list[str]): A list of keys whose values are modified.
+        scale (float | None, optional): The scale factor of the resize
+            operation. If None, it will be determined by output_shape.
+            Default: None.
+        output_shape (tuple(int) | None, optional): The size of the output
+            image. If None, it will be determined by scale. Note that if
+            scale is provided, output_shape will not be used.
+            Default: None.
+        kernel (str, optional): The kernel for the resize operation.
+            Currently support 'bicubic' only. Default: 'bicubic'.
+        kernel_width (float): The kernel width. Currently support 4.0 only.
+            Default: 4.0.
     """
 
-    def __init__(self,
-                 keys,
-                 scale=None,
-                 output_shape=None,
-                 kernel='bicubic',
-                 kernel_width=4.0):
+    def __init__(self, keys, scale=None, output_shape=None, kernel="bicubic", kernel_width=4.0):
 
-        if kernel.lower() != 'bicubic':
-            raise ValueError('Currently support bicubic kernel only.')
+        if kernel.lower() != "bicubic":
+            raise ValueError("Currently support bicubic kernel only.")
 
         if float(kernel_width) != 4.0:
-            raise ValueError('Current support only width=4 only.')
+            raise ValueError("Current support only width=4 only.")
 
         if scale is None and output_shape is None:
             raise ValueError('"scale" and "output_shape" cannot be both None')
@@ -229,11 +215,10 @@ class MATLABLikeResize:
         # apply cubic interpolation along two dimensions
         order = np.argsort(np.array(scale))
         for k in range(2):
-            key = (img.shape[k], output_size[k], scale[k], self.kernel_func,
-                   self.kernel_width)
-            weight, index = get_weights_indices(img.shape[k], output_size[k],
-                                                scale[k], self.kernel_func,
-                                                self.kernel_width)
+            key = (img.shape[k], output_size[k], scale[k], self.kernel_func, self.kernel_width)
+            weight, index = get_weights_indices(
+                img.shape[k], output_size[k], scale[k], self.kernel_func, self.kernel_width
+            )
             weights[key] = weight
             indices[key] = index
 
@@ -243,8 +228,7 @@ class MATLABLikeResize:
 
         for k in range(2):
             dim = order[k]
-            key = (img.shape[dim], output_size[dim], scale[dim],
-                   self.kernel_func, self.kernel_width)
+            key = (img.shape[dim], output_size[dim], scale[dim], self.kernel_func, self.kernel_width)
             output = resize_along_dim(output, weights[key], indices[key], dim)
 
         return output
@@ -261,15 +245,16 @@ class MATLABLikeResize:
             if is_single_image:
                 results[key] = results[key][0]
 
-        results['scale'] = self.scale
-        results['output_shape'] = self.output_shape
+        results["scale"] = self.scale
+        results["output_shape"] = self.output_shape
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
         repr_str += (
-            f'(keys={self.keys}, scale={self.scale}, '
-            f'output_shape={self.output_shape}, '
-            f'kernel={self.kernel}, kernel_width={self.kernel_width})')
+            f"(keys={self.keys}, scale={self.scale}, "
+            f"output_shape={self.output_shape}, "
+            f"kernel={self.kernel}, kernel_width={self.kernel_width})"
+        )
         return repr_str

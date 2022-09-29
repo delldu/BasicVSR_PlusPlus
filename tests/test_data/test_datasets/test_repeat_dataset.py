@@ -5,9 +5,7 @@ from mmedit.datasets import RepeatDataset
 
 
 def test_repeat_dataset():
-
     class ToyDataset(Dataset):
-
         def __init__(self):
             super().__init__()
             self.members = [1, 2, 3, 4, 5]

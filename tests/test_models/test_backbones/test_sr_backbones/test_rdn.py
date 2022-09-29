@@ -9,19 +9,13 @@ def test_rdn():
 
     scale = 4
 
-    model_cfg = dict(
-        type='RDN',
-        in_channels=3,
-        out_channels=3,
-        mid_channels=64,
-        num_blocks=16,
-        upscale_factor=scale)
+    model_cfg = dict(type="RDN", in_channels=3, out_channels=3, mid_channels=64, num_blocks=16, upscale_factor=scale)
 
     # build model
     model = build_backbone(model_cfg)
 
     # test attributes
-    assert model.__class__.__name__ == 'RDN'
+    assert model.__class__.__name__ == "RDN"
 
     # prepare data
     inputs = torch.rand(1, 3, 32, 16)

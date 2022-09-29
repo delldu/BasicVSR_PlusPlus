@@ -20,14 +20,16 @@ class LinearModule(nn.Module):
             ("linear", "act") and ("act", "linear").
     """
 
-    def __init__(self,
-                 in_features,
-                 out_features,
-                 bias=True,
-                 act_cfg=dict(type='ReLU'),
-                 inplace=True,
-                 with_spectral_norm=False,
-                 order=('linear', 'act')):
+    def __init__(
+        self,
+        in_features,
+        out_features,
+        bias=True,
+        act_cfg=dict(type="ReLU"),
+        inplace=True,
+        with_spectral_norm=False,
+        order=("linear", "act"),
+    ):
         super().__init__()
         assert act_cfg is None or isinstance(act_cfg, dict)
         self.act_cfg = act_cfg
@@ -35,7 +37,7 @@ class LinearModule(nn.Module):
         self.with_spectral_norm = with_spectral_norm
         self.order = order
         assert isinstance(self.order, tuple) and len(self.order) == 2
-        assert set(order) == set(['linear', 'act'])
+        assert set(order) == set(["linear", "act"])
 
         self.with_activation = act_cfg is not None
         self.with_bias = bias
@@ -53,18 +55,18 @@ class LinearModule(nn.Module):
         # build activation layer
         if self.with_activation:
             act_cfg_ = act_cfg.copy()
-            act_cfg_.setdefault('inplace', inplace)
+            act_cfg_.setdefault("inplace", inplace)
             self.activate = build_activation_layer(act_cfg_)
 
         # Use msra init by default
         self.init_weights()
 
     def init_weights(self):
-        if self.with_activation and self.act_cfg['type'] == 'LeakyReLU':
-            nonlinearity = 'leaky_relu'
-            a = self.act_cfg.get('negative_slope', 0.01)
+        if self.with_activation and self.act_cfg["type"] == "LeakyReLU":
+            nonlinearity = "leaky_relu"
+            a = self.act_cfg.get("negative_slope", 0.01)
         else:
-            nonlinearity = 'relu'
+            nonlinearity = "relu"
             a = 0
 
         kaiming_init(self.linear, a=a, nonlinearity=nonlinearity)
@@ -82,8 +84,8 @@ class LinearModule(nn.Module):
             torch.Tensor: Same as ``torch.nn.Linear``.
         """
         for layer in self.order:
-            if layer == 'linear':
+            if layer == "linear":
                 x = self.linear(x)
-            elif layer == 'act' and activate and self.with_activation:
+            elif layer == "act" and activate and self.with_activation:
                 x = self.activate(x)
         return x

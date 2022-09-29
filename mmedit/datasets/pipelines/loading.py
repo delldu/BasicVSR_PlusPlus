@@ -5,8 +5,7 @@ import mmcv
 import numpy as np
 from mmcv.fileio import FileClient
 
-from mmedit.core.mask import (bbox2mask, brush_stroke_mask, get_irregular_mask,
-                              random_bbox)
+from mmedit.core.mask import bbox2mask, brush_stroke_mask, get_irregular_mask, random_bbox
 from ..registry import PIPELINES
 
 
@@ -30,16 +29,18 @@ class LoadImageFromFile:
         kwargs (dict): Args for file client.
     """
 
-    def __init__(self,
-                 io_backend='disk',
-                 key='gt',
-                 flag='color',
-                 channel_order='bgr',
-                 convert_to=None,
-                 save_original_img=False,
-                 use_cache=False,
-                 backend=None,
-                 **kwargs):
+    def __init__(
+        self,
+        io_backend="disk",
+        key="gt",
+        flag="color",
+        channel_order="bgr",
+        convert_to=None,
+        save_original_img=False,
+        use_cache=False,
+        backend=None,
+        **kwargs,
+    ):
 
         self.io_backend = io_backend
         self.key = key
@@ -63,7 +64,7 @@ class LoadImageFromFile:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        filepath = str(results[f'{self.key}_path'])
+        filepath = str(results[f"{self.key}_path"])
         if self.file_client is None:
             self.file_client = FileClient(self.io_backend, **self.kwargs)
         if self.use_cache:
@@ -74,44 +75,40 @@ class LoadImageFromFile:
             else:
                 img_bytes = self.file_client.get(filepath)
                 img = mmcv.imfrombytes(
-                    img_bytes,
-                    flag=self.flag,
-                    channel_order=self.channel_order,
-                    backend=self.backend)  # HWC
+                    img_bytes, flag=self.flag, channel_order=self.channel_order, backend=self.backend
+                )  # HWC
                 self.cache[filepath] = img
         else:
             img_bytes = self.file_client.get(filepath)
             img = mmcv.imfrombytes(
-                img_bytes,
-                flag=self.flag,
-                channel_order=self.channel_order,
-                backend=self.backend)  # HWC
+                img_bytes, flag=self.flag, channel_order=self.channel_order, backend=self.backend
+            )  # HWC
 
         if self.convert_to is not None:
-            if self.channel_order == 'bgr' and self.convert_to.lower() == 'y':
+            if self.channel_order == "bgr" and self.convert_to.lower() == "y":
                 img = mmcv.bgr2ycbcr(img, y_only=True)
-            elif self.channel_order == 'rgb':
+            elif self.channel_order == "rgb":
                 img = mmcv.rgb2ycbcr(img, y_only=True)
             else:
-                raise ValueError('Currently support only "bgr2ycbcr" or '
-                                 '"bgr2ycbcr".')
+                raise ValueError('Currently support only "bgr2ycbcr" or ' '"bgr2ycbcr".')
             if img.ndim == 2:
                 img = np.expand_dims(img, axis=2)
 
         results[self.key] = img
-        results[f'{self.key}_path'] = filepath
-        results[f'{self.key}_ori_shape'] = img.shape
+        results[f"{self.key}_path"] = filepath
+        results[f"{self.key}_ori_shape"] = img.shape
         if self.save_original_img:
-            results[f'ori_{self.key}'] = img.copy()
+            results[f"ori_{self.key}"] = img.copy()
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
         repr_str += (
-            f'(io_backend={self.io_backend}, key={self.key}, '
-            f'flag={self.flag}, save_original_img={self.save_original_img}, '
-            f'channel_order={self.channel_order}, use_cache={self.use_cache})')
+            f"(io_backend={self.io_backend}, key={self.key}, "
+            f"flag={self.flag}, save_original_img={self.save_original_img}, "
+            f"channel_order={self.channel_order}, use_cache={self.use_cache})"
+        )
         return repr_str
 
 
@@ -148,10 +145,9 @@ class LoadImageFromFileList(LoadImageFromFile):
 
         if self.file_client is None:
             self.file_client = FileClient(self.io_backend, **self.kwargs)
-        filepaths = results[f'{self.key}_path']
+        filepaths = results[f"{self.key}_path"]
         if not isinstance(filepaths, list):
-            raise TypeError(
-                f'filepath should be list, but got {type(filepaths)}')
+            raise TypeError(f"filepath should be list, but got {type(filepaths)}")
 
         filepaths = [str(v) for v in filepaths]
 
@@ -161,20 +157,16 @@ class LoadImageFromFileList(LoadImageFromFile):
             ori_imgs = []
         for filepath in filepaths:
             img_bytes = self.file_client.get(filepath)
-            img = mmcv.imfrombytes(
-                img_bytes, flag=self.flag,
-                channel_order=self.channel_order)  # HWC
+            img = mmcv.imfrombytes(img_bytes, flag=self.flag, channel_order=self.channel_order)  # HWC
 
             # convert to y-channel, if specified
             if self.convert_to is not None:
-                if self.channel_order == 'bgr' and self.convert_to.lower(
-                ) == 'y':
+                if self.channel_order == "bgr" and self.convert_to.lower() == "y":
                     img = mmcv.bgr2ycbcr(img, y_only=True)
-                elif self.channel_order == 'rgb':
+                elif self.channel_order == "rgb":
                     img = mmcv.rgb2ycbcr(img, y_only=True)
                 else:
-                    raise ValueError('Currently support only "bgr2ycbcr" or '
-                                     '"bgr2ycbcr".')
+                    raise ValueError('Currently support only "bgr2ycbcr" or ' '"bgr2ycbcr".')
 
             if img.ndim == 2:
                 img = np.expand_dims(img, axis=2)
@@ -185,10 +177,10 @@ class LoadImageFromFileList(LoadImageFromFile):
                 ori_imgs.append(img.copy())
 
         results[self.key] = imgs
-        results[f'{self.key}_path'] = filepaths
-        results[f'{self.key}_ori_shape'] = shapes
+        results[f"{self.key}_path"] = filepaths
+        results[f"{self.key}_ori_shape"] = shapes
         if self.save_original_img:
-            results[f'ori_{self.key}'] = ori_imgs
+            results[f"ori_{self.key}"] = ori_imgs
 
         return results
 
@@ -208,12 +200,7 @@ class RandomLoadResizeBg:
         kwargs (dict): Args for file client.
     """
 
-    def __init__(self,
-                 bg_dir,
-                 io_backend='disk',
-                 flag='color',
-                 channel_order='bgr',
-                 **kwargs):
+    def __init__(self, bg_dir, io_backend="disk", flag="color", channel_order="bgr", **kwargs):
         self.bg_dir = bg_dir
         self.bg_list = list(mmcv.scandir(bg_dir))
         self.io_backend = io_backend
@@ -234,14 +221,13 @@ class RandomLoadResizeBg:
         """
         if self.file_client is None:
             self.file_client = FileClient(self.io_backend, **self.kwargs)
-        h, w = results['fg'].shape[:2]
+        h, w = results["fg"].shape[:2]
         idx = np.random.randint(len(self.bg_list))
         filepath = Path(self.bg_dir).joinpath(self.bg_list[idx])
         img_bytes = self.file_client.get(filepath)
-        img = mmcv.imfrombytes(
-            img_bytes, flag=self.flag, channel_order=self.channel_order)  # HWC
-        bg = mmcv.imresize(img, (w, h), interpolation='bicubic')
-        results['bg'] = bg
+        img = mmcv.imfrombytes(img_bytes, flag=self.flag, channel_order=self.channel_order)  # HWC
+        bg = mmcv.imresize(img, (w, h), interpolation="bicubic")
+        results["bg"] = bg
         return results
 
     def __repr__(self):
@@ -316,7 +302,7 @@ class LoadMask:
             different configs.
     """
 
-    def __init__(self, mask_mode='bbox', mask_config=None):
+    def __init__(self, mask_mode="bbox", mask_config=None):
         self.mask_mode = mask_mode
         self.mask_config = dict() if mask_config is None else mask_config
         assert isinstance(self.mask_config, dict)
@@ -325,31 +311,29 @@ class LoadMask:
         self._init_info()
 
     def _init_info(self):
-        if self.mask_mode == 'set':
+        if self.mask_mode == "set":
             # get mask list information
             self.mask_list = []
-            mask_list_file = self.mask_config['mask_list_file']
-            with open(mask_list_file, 'r') as f:
+            mask_list_file = self.mask_config["mask_list_file"]
+            with open(mask_list_file, "r") as f:
                 for line in f:
-                    line_split = line.strip().split(' ')
+                    line_split = line.strip().split(" ")
                     mask_name = line_split[0]
-                    self.mask_list.append(
-                        Path(self.mask_config['prefix']).joinpath(mask_name))
+                    self.mask_list.append(Path(self.mask_config["prefix"]).joinpath(mask_name))
             self.mask_set_size = len(self.mask_list)
-            self.io_backend = self.mask_config['io_backend']
-            self.flag = self.mask_config['flag']
-            self.file_client_kwargs = self.mask_config['file_client_kwargs']
+            self.io_backend = self.mask_config["io_backend"]
+            self.flag = self.mask_config["flag"]
+            self.file_client_kwargs = self.mask_config["file_client_kwargs"]
             self.file_client = None
-        elif self.mask_mode == 'file':
-            self.io_backend = 'disk'
-            self.flag = 'unchanged'
+        elif self.mask_mode == "file":
+            self.io_backend = "disk"
+            self.flag = "unchanged"
             self.file_client_kwargs = dict()
             self.file_client = None
 
     def _get_random_mask_from_set(self):
         if self.file_client is None:
-            self.file_client = FileClient(self.io_backend,
-                                          **self.file_client_kwargs)
+            self.file_client = FileClient(self.io_backend, **self.file_client_kwargs)
         # minus 1 to avoid out of range error
         mask_idx = np.random.randint(0, self.mask_set_size)
         mask_bytes = self.file_client.get(self.mask_list[mask_idx])
@@ -359,13 +343,12 @@ class LoadMask:
         else:
             mask = mask[:, :, 0:1]
 
-        mask[mask > 0] = 1.
+        mask[mask > 0] = 1.0
         return mask
 
     def _get_mask_from_file(self, path):
         if self.file_client is None:
-            self.file_client = FileClient(self.io_backend,
-                                          **self.file_client_kwargs)
+            self.file_client = FileClient(self.io_backend, **self.file_client_kwargs)
         mask_bytes = self.file_client.get(path)
         mask = mmcv.imfrombytes(mask_bytes, flag=self.flag)  # HWC, BGR
         if mask.ndim == 2:
@@ -373,7 +356,7 @@ class LoadMask:
         else:
             mask = mask[:, :, 0:1]
 
-        mask[mask > 0] = 1.
+        mask[mask > 0] = 1.0
         return mask
 
     def __call__(self, results):
@@ -387,22 +370,21 @@ class LoadMask:
             dict: A dict containing the processed data and information.
         """
 
-        if self.mask_mode == 'bbox':
+        if self.mask_mode == "bbox":
             mask_bbox = random_bbox(**self.mask_config)
-            mask = bbox2mask(self.mask_config['img_shape'], mask_bbox)
-            results['mask_bbox'] = mask_bbox
-        elif self.mask_mode == 'irregular':
+            mask = bbox2mask(self.mask_config["img_shape"], mask_bbox)
+            results["mask_bbox"] = mask_bbox
+        elif self.mask_mode == "irregular":
             mask = get_irregular_mask(**self.mask_config)
-        elif self.mask_mode == 'set':
+        elif self.mask_mode == "set":
             mask = self._get_random_mask_from_set()
-        elif self.mask_mode == 'ff':
+        elif self.mask_mode == "ff":
             mask = brush_stroke_mask(**self.mask_config)
-        elif self.mask_mode == 'file':
-            mask = self._get_mask_from_file(results['mask_path'])
+        elif self.mask_mode == "file":
+            mask = self._get_mask_from_file(results["mask_path"])
         else:
-            raise NotImplementedError(
-                f'Mask mode {self.mask_mode} has not been implemented.')
-        results['mask'] = mask
+            raise NotImplementedError(f"Mask mode {self.mask_mode} has not been implemented.")
+        results["mask"] = mask
         return results
 
     def __repr__(self):
@@ -439,10 +421,9 @@ class GetSpatialDiscountMask:
         """
         w, h = np.meshgrid(np.arange(mask_width), np.arange(mask_height))
         grid_stack = np.stack([h, w], axis=2)
-        mask_values = (self.gamma**(np.minimum(
-            grid_stack, [mask_height - 1, mask_width - 1] - grid_stack) *
-                                    self.beta)).max(
-                                        axis=2, keepdims=True)
+        mask_values = (
+            self.gamma ** (np.minimum(grid_stack, [mask_height - 1, mask_width - 1] - grid_stack) * self.beta)
+        ).max(axis=2, keepdims=True)
 
         return mask_values
 
@@ -457,22 +438,21 @@ class GetSpatialDiscountMask:
             dict: A dict containing the processed data and information.
         """
 
-        mask_bbox = results['mask_bbox']
-        mask = results['mask']
+        mask_bbox = results["mask_bbox"]
+        mask = results["mask"]
         mask_height, mask_width = mask_bbox[-2:]
         discount_hole = self.spatial_discount_mask(mask_width, mask_height)
         discount_mask = np.zeros_like(mask)
-        discount_mask[mask_bbox[0]:mask_bbox[0] + mask_height,
-                      mask_bbox[1]:mask_bbox[1] + mask_width,
-                      ...] = discount_hole
+        discount_mask[
+            mask_bbox[0] : mask_bbox[0] + mask_height, mask_bbox[1] : mask_bbox[1] + mask_width, ...
+        ] = discount_hole
 
-        results['discount_mask'] = discount_mask
+        results["discount_mask"] = discount_mask
 
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + (f'(gamma={self.gamma}, '
-                                          f'beta={self.beta})')
+        return self.__class__.__name__ + (f"(gamma={self.gamma}, " f"beta={self.beta})")
 
 
 @PIPELINES.register_module()
@@ -512,36 +492,34 @@ class LoadPairedImageFromFile(LoadImageFromFile):
         """
         if self.file_client is None:
             self.file_client = FileClient(self.io_backend, **self.kwargs)
-        filepath = str(results[f'{self.key}_path'])
+        filepath = str(results[f"{self.key}_path"])
         img_bytes = self.file_client.get(filepath)
-        img = mmcv.imfrombytes(
-            img_bytes, flag=self.flag, channel_order=self.channel_order)  # HWC
+        img = mmcv.imfrombytes(img_bytes, flag=self.flag, channel_order=self.channel_order)  # HWC
         if img.ndim == 2:
             img = np.expand_dims(img, axis=2)
 
         results[self.key] = img
-        results[f'{self.key}_path'] = filepath
-        results[f'{self.key}_ori_shape'] = img.shape
+        results[f"{self.key}_path"] = filepath
+        results[f"{self.key}_ori_shape"] = img.shape
         if self.save_original_img:
-            results[f'ori_{self.key}'] = img.copy()
+            results[f"ori_{self.key}"] = img.copy()
 
         # crop pair into a and b
         w = img.shape[1]
         if w % 2 != 0:
-            raise ValueError(
-                f'The width of image pair must be even number, but got {w}.')
+            raise ValueError(f"The width of image pair must be even number, but got {w}.")
         new_w = w // 2
         img_a = img[:, :new_w, :]
         img_b = img[:, new_w:, :]
 
-        results['img_a'] = img_a
-        results['img_b'] = img_b
-        results['img_a_path'] = filepath
-        results['img_b_path'] = filepath
-        results['img_a_ori_shape'] = img_a.shape
-        results['img_b_ori_shape'] = img_b.shape
+        results["img_a"] = img_a
+        results["img_b"] = img_b
+        results["img_a_path"] = filepath
+        results["img_b_path"] = filepath
+        results["img_a_ori_shape"] = img_a.shape
+        results["img_b_ori_shape"] = img_b.shape
         if self.save_original_img:
-            results['ori_img_a'] = img_a.copy()
-            results['ori_img_b'] = img_b.copy()
+            results["ori_img_a"] = img_a.copy()
+            results["ori_img_b"] = img_b.copy()
 
         return results

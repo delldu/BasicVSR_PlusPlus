@@ -7,8 +7,7 @@ from mmedit.models.losses import LightCNNFeatureLoss
 
 def test_light_cnn_feature_loss():
 
-    pretrained = 'https://download.openmmlab.com/mmediting/' + \
-        'restorers/dic/light_cnn_feature.pth'
+    pretrained = "https://download.openmmlab.com/mmediting/" + "restorers/dic/light_cnn_feature.pth"
     pred = torch.rand((3, 3, 128, 128))
     gt = torch.rand((3, 3, 128, 128))
 
@@ -16,7 +15,7 @@ def test_light_cnn_feature_loss():
     loss = feature_loss(pred, gt)
     assert loss.item() > 0
 
-    feature_loss = LightCNNFeatureLoss(pretrained=pretrained, criterion='mse')
+    feature_loss = LightCNNFeatureLoss(pretrained=pretrained, criterion="mse")
     loss = feature_loss(pred, gt)
     assert loss.item() > 0
 
@@ -37,8 +36,7 @@ def test_light_cnn_feature_loss():
         loss_new = feature_loss(pred, gt)
         assert loss_new < loss
 
-        feature_loss = LightCNNFeatureLoss(
-            pretrained=pretrained, criterion='mse').cuda()
+        feature_loss = LightCNNFeatureLoss(pretrained=pretrained, criterion="mse").cuda()
         loss = feature_loss(pred, gt)
         assert loss.item() > 0
 
@@ -47,7 +45,7 @@ def test_light_cnn_feature_loss():
         feature_loss(pred, gt)
     # test criterion value error
     with pytest.raises(ValueError):
-        LightCNNFeatureLoss(pretrained=pretrained, criterion='l2')
+        LightCNNFeatureLoss(pretrained=pretrained, criterion="l2")
     # test assert isinstance(pretrained, str)
     with pytest.raises(AssertionError):
         LightCNNFeatureLoss(pretrained=None)

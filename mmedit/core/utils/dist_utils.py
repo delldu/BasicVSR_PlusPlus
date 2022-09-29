@@ -5,7 +5,7 @@ import torch.distributed as dist
 from mmcv.runner import get_dist_info
 
 
-def sync_random_seed(seed=None, device='cuda'):
+def sync_random_seed(seed=None, device="cuda"):
     """Make sure different ranks share the same seed.
     All workers must call this function, otherwise it will deadlock.
     This method is generally used in `DistributedSampler`,
@@ -19,7 +19,7 @@ def sync_random_seed(seed=None, device='cuda'):
         int: Seed to be used.
     """
     if seed is None:
-        seed = np.random.randint(2**31)
+        seed = np.random.randint(2 ** 31)
     assert isinstance(seed, int)
 
     rank, world_size = get_dist_info()

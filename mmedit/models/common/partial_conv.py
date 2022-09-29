@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from mmcv.cnn import CONV_LAYERS
 
 
-@CONV_LAYERS.register_module(name='PConv')
+@CONV_LAYERS.register_module(name="PConv")
 class PartialConv2d(nn.Conv2d):
     """Implementation for partial convolution.
 
@@ -33,9 +33,8 @@ class PartialConv2d(nn.Conv2d):
             out_channels, in_channels = 1, 1
 
         self.register_buffer(
-            'weight_mask_updater',
-            torch.ones(out_channels, in_channels, self.kernel_size[0],
-                       self.kernel_size[1]))
+            "weight_mask_updater", torch.ones(out_channels, in_channels, self.kernel_size[0], self.kernel_size[1])
+        )
 
         self.mask_kernel_numel = np.prod(self.weight_mask_updater.shape[1:4])
         self.mask_kernel_numel = (self.mask_kernel_numel).item()
@@ -74,7 +73,8 @@ class PartialConv2d(nn.Conv2d):
                     bias=None,
                     stride=self.stride,
                     padding=self.padding,
-                    dilation=self.dilation)
+                    dilation=self.dilation,
+                )
                 mask_ratio = self.mask_kernel_numel / (updated_mask + self.eps)
 
                 updated_mask = torch.clamp(updated_mask, 0, 1)

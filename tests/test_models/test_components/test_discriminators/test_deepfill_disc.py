@@ -2,32 +2,34 @@
 import pytest
 import torch
 
-from mmedit.models.components import (DeepFillv1Discriminators,
-                                      MultiLayerDiscriminator)
+from mmedit.models.components import DeepFillv1Discriminators, MultiLayerDiscriminator
 
 
 def test_deepfillv1_disc():
     model_config = dict(
         global_disc_cfg=dict(
-            type='MultiLayerDiscriminator',
+            type="MultiLayerDiscriminator",
             in_channels=3,
             max_channels=256,
             fc_in_channels=256 * 16 * 16,
             fc_out_channels=1,
             num_convs=4,
             norm_cfg=None,
-            act_cfg=dict(type='ELU'),
-            out_act_cfg=dict(type='LeakyReLU', negative_slope=0.2)),
+            act_cfg=dict(type="ELU"),
+            out_act_cfg=dict(type="LeakyReLU", negative_slope=0.2),
+        ),
         local_disc_cfg=dict(
-            type='MultiLayerDiscriminator',
+            type="MultiLayerDiscriminator",
             in_channels=3,
             max_channels=512,
             fc_in_channels=512 * 8 * 8,
             fc_out_channels=1,
             num_convs=4,
             norm_cfg=None,
-            act_cfg=dict(type='ELU'),
-            out_act_cfg=dict(type='LeakyReLU', negative_slope=0.2)))
+            act_cfg=dict(type="ELU"),
+            out_act_cfg=dict(type="LeakyReLU", negative_slope=0.2),
+        ),
+    )
     disc = DeepFillv1Discriminators(**model_config)
     disc.init_weights()
     global_x = torch.rand((2, 3, 256, 256))

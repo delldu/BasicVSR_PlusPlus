@@ -36,26 +36,30 @@ def generation_inference(model, img, img_unpaired=None):
     # process generation shown mode
     if img_unpaired is None:
         if model.show_input:
-            output = np.concatenate([
-                tensor2img(results['real_a'], min_max=(-1, 1)),
-                tensor2img(results['fake_b'], min_max=(-1, 1)),
-                tensor2img(results['real_b'], min_max=(-1, 1))
-            ],
-                                    axis=1)
+            output = np.concatenate(
+                [
+                    tensor2img(results["real_a"], min_max=(-1, 1)),
+                    tensor2img(results["fake_b"], min_max=(-1, 1)),
+                    tensor2img(results["real_b"], min_max=(-1, 1)),
+                ],
+                axis=1,
+            )
         else:
-            output = tensor2img(results['fake_b'], min_max=(-1, 1))
+            output = tensor2img(results["fake_b"], min_max=(-1, 1))
     else:
         if model.show_input:
-            output = np.concatenate([
-                tensor2img(results['real_a'], min_max=(-1, 1)),
-                tensor2img(results['fake_b'], min_max=(-1, 1)),
-                tensor2img(results['real_b'], min_max=(-1, 1)),
-                tensor2img(results['fake_a'], min_max=(-1, 1))
-            ],
-                                    axis=1)
+            output = np.concatenate(
+                [
+                    tensor2img(results["real_a"], min_max=(-1, 1)),
+                    tensor2img(results["fake_b"], min_max=(-1, 1)),
+                    tensor2img(results["real_b"], min_max=(-1, 1)),
+                    tensor2img(results["fake_a"], min_max=(-1, 1)),
+                ],
+                axis=1,
+            )
         else:
-            if model.test_direction == 'a2b':
-                output = tensor2img(results['fake_b'], min_max=(-1, 1))
+            if model.test_direction == "a2b":
+                output = tensor2img(results["fake_b"], min_max=(-1, 1))
             else:
-                output = tensor2img(results['fake_a'], min_max=(-1, 1))
+                output = tensor2img(results["fake_a"], min_max=(-1, 1))
     return output

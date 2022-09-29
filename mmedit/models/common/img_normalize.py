@@ -22,8 +22,7 @@ class ImgNormalize(nn.Conv2d):
         super().__init__(num_channels, num_channels, kernel_size=1)
 
         std = torch.Tensor(img_std)
-        self.weight.data = torch.eye(num_channels).view(
-            num_channels, num_channels, 1, 1)
+        self.weight.data = torch.eye(num_channels).view(num_channels, num_channels, 1, 1)
         self.weight.data.div_(std.view(num_channels, 1, 1, 1))
         self.bias.data = sign * pixel_range * torch.Tensor(img_mean)
         self.bias.data.div_(std)

@@ -64,32 +64,32 @@ class Resize:
             Note that if it is not `None`, its length should be equal to keys.
     """
 
-    def __init__(self,
-                 keys,
-                 scale=None,
-                 keep_ratio=False,
-                 size_factor=None,
-                 max_size=None,
-                 interpolation='bilinear',
-                 backend=None,
-                 output_keys=None):
-        assert keys, 'Keys should not be empty.'
+    def __init__(
+        self,
+        keys,
+        scale=None,
+        keep_ratio=False,
+        size_factor=None,
+        max_size=None,
+        interpolation="bilinear",
+        backend=None,
+        output_keys=None,
+    ):
+        assert keys, "Keys should not be empty."
         if output_keys:
             assert len(output_keys) == len(keys)
         else:
             output_keys = keys
         if size_factor:
-            assert scale is None, ('When size_factor is used, scale should ',
-                                   f'be None. But received {scale}.')
-            assert keep_ratio is False, ('When size_factor is used, '
-                                         'keep_ratio should be False.')
+            assert scale is None, ("When size_factor is used, scale should ", f"be None. But received {scale}.")
+            assert keep_ratio is False, "When size_factor is used, " "keep_ratio should be False."
         if max_size:
             assert size_factor is not None, (
-                'When max_size is used, '
-                f'size_factor should also be set. But received {size_factor}.')
+                "When max_size is used, " f"size_factor should also be set. But received {size_factor}."
+            )
         if isinstance(scale, float):
             if scale <= 0:
-                raise ValueError(f'Invalid scale {scale}, must be positive.')
+                raise ValueError(f"Invalid scale {scale}, must be positive.")
         elif mmcv.is_tuple_of(scale, int):
             max_long_edge = max(scale)
             max_short_edge = min(scale)
@@ -97,9 +97,7 @@ class Resize:
                 # assign np.inf to long edge for rescaling short edge later.
                 scale = (np.inf, max_long_edge)
         elif scale is not None:
-            raise TypeError(
-                f'Scale must be None, float or tuple of int, but got '
-                f'{type(scale)}.')
+            raise TypeError(f"Scale must be None, float or tuple of int, but got " f"{type(scale)}.")
         self.keys = keys
         self.output_keys = output_keys
         self.scale = scale
@@ -112,18 +110,12 @@ class Resize:
     def _resize(self, img):
         if self.keep_ratio:
             img, self.scale_factor = mmcv.imrescale(
-                img,
-                self.scale,
-                return_scale=True,
-                interpolation=self.interpolation,
-                backend=self.backend)
+                img, self.scale, return_scale=True, interpolation=self.interpolation, backend=self.backend
+            )
         else:
             img, w_scale, h_scale = mmcv.imresize(
-                img,
-                self.scale,
-                return_scale=True,
-                interpolation=self.interpolation,
-                backend=self.backend)
+                img, self.scale, return_scale=True, interpolation=self.interpolation, backend=self.backend
+            )
             self.scale_factor = np.array((w_scale, h_scale), dtype=np.float32)
         return img
 
@@ -142,30 +134,29 @@ class Resize:
             new_h = h - (h % self.size_factor)
             new_w = w - (w % self.size_factor)
             if self.max_size:
-                new_h = min(self.max_size - (self.max_size % self.size_factor),
-                            new_h)
-                new_w = min(self.max_size - (self.max_size % self.size_factor),
-                            new_w)
+                new_h = min(self.max_size - (self.max_size % self.size_factor), new_h)
+                new_w = min(self.max_size - (self.max_size % self.size_factor), new_w)
             self.scale = (new_w, new_h)
         for key, out_key in zip(self.keys, self.output_keys):
             results[out_key] = self._resize(results[key])
             if len(results[out_key].shape) == 2:
                 results[out_key] = np.expand_dims(results[out_key], axis=2)
 
-        results['scale_factor'] = self.scale_factor
-        results['keep_ratio'] = self.keep_ratio
-        results['interpolation'] = self.interpolation
-        results['backend'] = self.backend
+        results["scale_factor"] = self.scale_factor
+        results["keep_ratio"] = self.keep_ratio
+        results["interpolation"] = self.interpolation
+        results["backend"] = self.backend
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
         repr_str += (
-            f'(keys={self.keys}, output_keys={self.output_keys}, '
-            f'scale={self.scale}, '
-            f'keep_ratio={self.keep_ratio}, size_factor={self.size_factor}, '
-            f'max_size={self.max_size}, interpolation={self.interpolation})')
+            f"(keys={self.keys}, output_keys={self.output_keys}, "
+            f"scale={self.scale}, "
+            f"keep_ratio={self.keep_ratio}, size_factor={self.size_factor}, "
+            f"max_size={self.max_size}, interpolation={self.interpolation})"
+        )
         return repr_str
 
 
@@ -183,13 +174,11 @@ class RandomRotation:
     def __init__(self, keys, degrees):
         if isinstance(degrees, (int, float)):
             if degrees < 0.0:
-                raise ValueError('Degrees must be positive if it is a number.')
+                raise ValueError("Degrees must be positive if it is a number.")
             else:
                 degrees = (-degrees, degrees)
         elif not mmcv.is_tuple_of(degrees, (int, float)):
-            raise TypeError(f'Degrees must be float | int or tuple of float | '
-                            'int, but got '
-                            f'{type(degrees)}.')
+            raise TypeError(f"Degrees must be float | int or tuple of float | " "int, but got " f"{type(degrees)}.")
 
         self.keys = keys
         self.degrees = degrees
@@ -201,13 +190,13 @@ class RandomRotation:
             results[k] = mmcv.imrotate(results[k], angle)
             if results[k].ndim == 2:
                 results[k] = np.expand_dims(results[k], axis=2)
-        results['degrees'] = self.degrees
+        results["degrees"] = self.degrees
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, degrees={self.degrees})')
+        repr_str += f"(keys={self.keys}, degrees={self.degrees})"
         return repr_str
 
 
@@ -227,12 +216,14 @@ class Flip:
         direction (str): Flip images horizontally or vertically. Options are
             "horizontal" | "vertical". Default: "horizontal".
     """
-    _directions = ['horizontal', 'vertical']
 
-    def __init__(self, keys, flip_ratio=0.5, direction='horizontal'):
+    _directions = ["horizontal", "vertical"]
+
+    def __init__(self, keys, flip_ratio=0.5, direction="horizontal"):
         if direction not in self._directions:
-            raise ValueError(f'Direction {direction} is not supported.'
-                             f'Currently support ones are {self._directions}')
+            raise ValueError(
+                f"Direction {direction} is not supported." f"Currently support ones are {self._directions}"
+            )
         self.keys = keys
         self.flip_ratio = flip_ratio
         self.direction = direction
@@ -257,15 +248,14 @@ class Flip:
                 else:
                     mmcv.imflip_(results[key], self.direction)
 
-        results['flip'] = flip
-        results['flip_direction'] = self.direction
+        results["flip"] = flip
+        results["flip_direction"] = self.direction
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, flip_ratio={self.flip_ratio}, '
-                     f'direction={self.direction})')
+        repr_str += f"(keys={self.keys}, flip_ratio={self.flip_ratio}, " f"direction={self.direction})"
         return repr_str
 
 
@@ -312,18 +302,14 @@ class Pad:
         if new_h != h or new_w != w:
             pad_width = ((0, pad_h), (0, pad_w), (0, 0))
             for key in self.keys:
-                results[key] = np.pad(results[key],
-                                      pad_width[:results[key].ndim],
-                                      **self.kwargs)
-        results['pad'] = (pad_h, pad_w)
+                results[key] = np.pad(results[key], pad_width[: results[key].ndim], **self.kwargs)
+        results["pad"] = (pad_h, pad_w)
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        kwargs_str = ', '.join(
-            [f'{key}={val}' for key, val in self.kwargs.items()])
-        repr_str += (f'(keys={self.keys}, ds_factor={self.ds_factor}, '
-                     f'{kwargs_str})')
+        kwargs_str = ", ".join([f"{key}={val}" for key, val in self.kwargs.items()])
+        repr_str += f"(keys={self.keys}, ds_factor={self.ds_factor}, " f"{kwargs_str})"
         return repr_str
 
 
@@ -367,61 +353,52 @@ class RandomAffine:
             Default: None.
     """
 
-    def __init__(self,
-                 keys,
-                 degrees,
-                 translate=None,
-                 scale=None,
-                 shear=None,
-                 flip_ratio=None):
+    def __init__(self, keys, degrees, translate=None, scale=None, shear=None, flip_ratio=None):
         self.keys = keys
         if isinstance(degrees, numbers.Number):
-            assert degrees >= 0, ('If degrees is a single number, '
-                                  'it must be positive.')
+            assert degrees >= 0, "If degrees is a single number, " "it must be positive."
             self.degrees = (-degrees, degrees)
         else:
-            assert isinstance(degrees, tuple) and len(degrees) == 2, \
-                'degrees should be a tuple and it must be of length 2.'
+            assert (
+                isinstance(degrees, tuple) and len(degrees) == 2
+            ), "degrees should be a tuple and it must be of length 2."
             self.degrees = degrees
 
         if translate is not None:
-            assert isinstance(translate, tuple) and len(translate) == 2, \
-                'translate should be a tuple and it must be of length 2.'
+            assert (
+                isinstance(translate, tuple) and len(translate) == 2
+            ), "translate should be a tuple and it must be of length 2."
             for t in translate:
-                assert 0.0 <= t <= 1.0, ('translation values should be '
-                                         'between 0 and 1.')
+                assert 0.0 <= t <= 1.0, "translation values should be " "between 0 and 1."
         self.translate = translate
 
         if scale is not None:
-            assert isinstance(scale, tuple) and len(scale) == 2, \
-                'scale should be a tuple and it must be of length 2.'
+            assert isinstance(scale, tuple) and len(scale) == 2, "scale should be a tuple and it must be of length 2."
             for s in scale:
-                assert s > 0, 'scale values should be positive.'
+                assert s > 0, "scale values should be positive."
         self.scale = scale
 
         if shear is not None:
             if isinstance(shear, numbers.Number):
-                assert shear >= 0, ('If shear is a single number, '
-                                    'it must be positive.')
+                assert shear >= 0, "If shear is a single number, " "it must be positive."
                 self.shear = (-shear, shear)
             else:
-                assert isinstance(shear, tuple) and len(shear) == 2, \
-                    'shear should be a tuple and it must be of length 2.'
+                assert (
+                    isinstance(shear, tuple) and len(shear) == 2
+                ), "shear should be a tuple and it must be of length 2."
                 # X-Axis and Y-Axis shear with (min, max)
                 self.shear = shear
         else:
             self.shear = shear
 
         if flip_ratio is not None:
-            assert isinstance(flip_ratio,
-                              float), 'flip_ratio should be a float.'
+            assert isinstance(flip_ratio, float), "flip_ratio should be a float."
             self.flip_ratio = flip_ratio
         else:
             self.flip_ratio = 0
 
     @staticmethod
-    def _get_params(degrees, translate, scale_ranges, shears, flip_ratio,
-                    img_size):
+    def _get_params(degrees, translate, scale_ranges, shears, flip_ratio, img_size):
         """Get parameters for affine transformation.
 
         Returns:
@@ -431,14 +408,15 @@ class RandomAffine:
         if translate is not None:
             max_dx = translate[0] * img_size[0]
             max_dy = translate[1] * img_size[1]
-            translations = (np.round(np.random.uniform(-max_dx, max_dx)),
-                            np.round(np.random.uniform(-max_dy, max_dy)))
+            translations = (np.round(np.random.uniform(-max_dx, max_dx)), np.round(np.random.uniform(-max_dy, max_dy)))
         else:
             translations = (0, 0)
 
         if scale_ranges is not None:
-            scale = (np.random.uniform(scale_ranges[0], scale_ranges[1]),
-                     np.random.uniform(scale_ranges[0], scale_ranges[1]))
+            scale = (
+                np.random.uniform(scale_ranges[0], scale_ranges[1]),
+                np.random.uniform(scale_ranges[0], scale_ranges[1]),
+            )
         else:
             scale = (1.0, 1.0)
 
@@ -456,8 +434,7 @@ class RandomAffine:
         return angle, translations, scale, shear, flip
 
     @staticmethod
-    def _get_inverse_affine_matrix(center, angle, translate, scale, shear,
-                                   flip):
+    def _get_inverse_affine_matrix(center, angle, translate, scale, shear, flip):
         """Helper method to compute inverse matrix for affine transformation.
 
         As it is explained in PIL.Image.rotate, we need compute INVERSE of
@@ -484,21 +461,21 @@ class RandomAffine:
         scale_y = 1.0 / scale[1] * flip[1]
 
         # Inverted rotation matrix with scale and shear
-        d = math.cos(angle + shear) * math.cos(angle) + math.sin(
-            angle + shear) * math.sin(angle)
+        d = math.cos(angle + shear) * math.cos(angle) + math.sin(angle + shear) * math.sin(angle)
         matrix = [
             math.cos(angle) * scale_x,
-            math.sin(angle + shear) * scale_x, 0, -math.sin(angle) * scale_y,
-            math.cos(angle + shear) * scale_y, 0
+            math.sin(angle + shear) * scale_x,
+            0,
+            -math.sin(angle) * scale_y,
+            math.cos(angle + shear) * scale_y,
+            0,
         ]
         matrix = [m / d for m in matrix]
 
         # Apply inverse of translation and of center translation:
         # RSS^-1 * C^-1 * T^-1
-        matrix[2] += matrix[0] * (-center[0] - translate[0]) + matrix[1] * (
-            -center[1] - translate[1])
-        matrix[5] += matrix[3] * (-center[0] - translate[0]) + matrix[4] * (
-            -center[1] - translate[1])
+        matrix[2] += matrix[0] * (-center[0] - translate[0]) + matrix[1] * (-center[1] - translate[1])
+        matrix[5] += matrix[3] * (-center[0] - translate[0]) + matrix[4] * (-center[1] - translate[1])
 
         # Apply center translation: C * RSS^-1 * C^-1 * T^-1
         matrix[2] += center[0]
@@ -519,29 +496,26 @@ class RandomAffine:
         h, w = results[self.keys[0]].shape[:2]
         # if image is too small, set degree to 0 to reduce introduced dark area
         if np.maximum(h, w) < 1024:
-            params = self._get_params((0, 0), self.translate, self.scale,
-                                      self.shear, self.flip_ratio, (h, w))
+            params = self._get_params((0, 0), self.translate, self.scale, self.shear, self.flip_ratio, (h, w))
         else:
-            params = self._get_params(self.degrees, self.translate, self.scale,
-                                      self.shear, self.flip_ratio, (h, w))
+            params = self._get_params(self.degrees, self.translate, self.scale, self.shear, self.flip_ratio, (h, w))
 
         center = (w * 0.5 - 0.5, h * 0.5 - 0.5)
         M = self._get_inverse_affine_matrix(center, *params)
         M = np.array(M).reshape((2, 3))
 
         for key in self.keys:
-            results[key] = cv2.warpAffine(
-                results[key],
-                M, (w, h),
-                flags=cv2.INTER_NEAREST + cv2.WARP_INVERSE_MAP)
+            results[key] = cv2.warpAffine(results[key], M, (w, h), flags=cv2.INTER_NEAREST + cv2.WARP_INVERSE_MAP)
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, degrees={self.degrees}, '
-                     f'translate={self.translate}, scale={self.scale}, '
-                     f'shear={self.shear}, flip_ratio={self.flip_ratio})')
+        repr_str += (
+            f"(keys={self.keys}, degrees={self.degrees}, "
+            f"translate={self.translate}, scale={self.scale}, "
+            f"shear={self.shear}, flip_ratio={self.flip_ratio})"
+        )
         return repr_str
 
 
@@ -562,12 +536,12 @@ class RandomJitter:
 
     def __init__(self, hue_range=40):
         if isinstance(hue_range, numbers.Number):
-            assert hue_range >= 0, ('If hue_range is a single number, '
-                                    'it must be positive.')
+            assert hue_range >= 0, "If hue_range is a single number, " "it must be positive."
             self.hue_range = (-hue_range, hue_range)
         else:
-            assert isinstance(hue_range, tuple) and len(hue_range) == 2, \
-                'hue_range should be a tuple and it must be of length 2.'
+            assert (
+                isinstance(hue_range, tuple) and len(hue_range) == 2
+            ), "hue_range should be a tuple and it must be of length 2."
             self.hue_range = hue_range
 
     def __call__(self, results):
@@ -580,7 +554,7 @@ class RandomJitter:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        fg, alpha = results['fg'], results['alpha']
+        fg, alpha = results["fg"], results["alpha"]
 
         # convert to HSV space;
         # convert to float32 image to keep precision during space conversion.
@@ -608,12 +582,12 @@ class RandomJitter:
         fg[:, :, 2] = val
         # convert back to BGR space
         fg = mmcv.hsv2bgr(fg)
-        results['fg'] = fg * 255
+        results["fg"] = fg * 255
 
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'hue_range={self.hue_range}'
+        return self.__class__.__name__ + f"hue_range={self.hue_range}"
 
 
 @PIPELINES.register_module()
@@ -631,7 +605,7 @@ class ColorJitter:
     """
 
     def __init__(self, keys, to_rgb=False, **kwargs):
-        assert keys, 'Keys should not be empty.'
+        assert keys, "Keys should not be empty."
 
         self.keys = keys
         self.to_rgb = to_rgb
@@ -649,7 +623,7 @@ class ColorJitter:
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, to_rgb={self.to_rgb})')
+        repr_str += f"(keys={self.keys}, to_rgb={self.to_rgb})"
 
         return repr_str
 
@@ -692,8 +666,7 @@ class BinarizeImage:
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, binary_thr={self.binary_thr}, '
-                     f'to_int={self.to_int})')
+        repr_str += f"(keys={self.keys}, binary_thr={self.binary_thr}, " f"to_int={self.to_int})"
 
         return repr_str
 
@@ -711,7 +684,7 @@ class RandomMaskDilation:
         kernel_max (int): Max size of dilation kernel.
     """
 
-    def __init__(self, keys, binary_thr=0., kernel_min=9, kernel_max=49):
+    def __init__(self, keys, binary_thr=0.0, kernel_min=9, kernel_max=49):
         self.keys = keys
         self.kernel_min = kernel_min
         self.kernel_max = kernel_max
@@ -741,14 +714,13 @@ class RandomMaskDilation:
             results[k], d_kernel = self._random_dilate(results[k])
             if len(results[k].shape) == 2:
                 results[k] = np.expand_dims(results[k], axis=2)
-            results[k + '_dilate_kernel_size'] = d_kernel
+            results[k + "_dilate_kernel_size"] = d_kernel
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, kernel_min={self.kernel_min}, '
-                     f'kernel_max={self.kernel_max})')
+        repr_str += f"(keys={self.keys}, kernel_min={self.kernel_min}, " f"kernel_max={self.kernel_max})"
 
         return repr_str
 
@@ -793,14 +765,13 @@ class RandomTransposeHW:
                 else:
                     results[key] = results[key].transpose(1, 0, 2)
 
-        results['transpose'] = transpose
+        results["transpose"] = transpose
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (
-            f'(keys={self.keys}, transpose_ratio={self.transpose_ratio})')
+        repr_str += f"(keys={self.keys}, transpose_ratio={self.transpose_ratio})"
         return repr_str
 
 
@@ -827,12 +798,13 @@ class GenerateFrameIndiceswithPadding:
         filename_tmpl (str): Template for file name. Default: '{:08d}'.
     """
 
-    def __init__(self, padding, filename_tmpl='{:08d}'):
-        if padding not in ('replicate', 'reflection', 'reflection_circle',
-                           'circle'):
-            raise ValueError(f'Wrong padding mode {padding}.'
-                             'Should be "replicate", "reflection", '
-                             '"reflection_circle",  "circle"')
+    def __init__(self, padding, filename_tmpl="{:08d}"):
+        if padding not in ("replicate", "reflection", "reflection_circle", "circle"):
+            raise ValueError(
+                f"Wrong padding mode {padding}."
+                'Should be "replicate", "reflection", '
+                '"reflection_circle",  "circle"'
+            )
         self.padding = padding
         self.filename_tmpl = filename_tmpl
 
@@ -846,29 +818,29 @@ class GenerateFrameIndiceswithPadding:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        clip_name, frame_name = results['key'].split(os.sep)
+        clip_name, frame_name = results["key"].split(os.sep)
         current_idx = int(frame_name)
-        max_frame_num = results['max_frame_num'] - 1  # start from 0
-        num_input_frames = results['num_input_frames']
+        max_frame_num = results["max_frame_num"] - 1  # start from 0
+        num_input_frames = results["num_input_frames"]
         num_pad = num_input_frames // 2
 
         frame_list = []
         for i in range(current_idx - num_pad, current_idx + num_pad + 1):
             if i < 0:
-                if self.padding == 'replicate':
+                if self.padding == "replicate":
                     pad_idx = 0
-                elif self.padding == 'reflection':
+                elif self.padding == "reflection":
                     pad_idx = -i
-                elif self.padding == 'reflection_circle':
+                elif self.padding == "reflection_circle":
                     pad_idx = current_idx + num_pad - i
                 else:
                     pad_idx = num_input_frames + i
             elif i > max_frame_num:
-                if self.padding == 'replicate':
+                if self.padding == "replicate":
                     pad_idx = max_frame_num
-                elif self.padding == 'reflection':
+                elif self.padding == "reflection":
                     pad_idx = max_frame_num * 2 - i
-                elif self.padding == 'reflection_circle':
+                elif self.padding == "reflection_circle":
                     pad_idx = (current_idx - num_pad) - (i - max_frame_num)
                 else:
                     pad_idx = i - num_input_frames
@@ -876,16 +848,12 @@ class GenerateFrameIndiceswithPadding:
                 pad_idx = i
             frame_list.append(pad_idx)
 
-        lq_path_root = results['lq_path']
-        gt_path_root = results['gt_path']
-        lq_paths = [
-            osp.join(lq_path_root, clip_name,
-                     f'{self.filename_tmpl.format(idx)}.png')
-            for idx in frame_list
-        ]
-        gt_paths = [osp.join(gt_path_root, clip_name, f'{frame_name}.png')]
-        results['lq_path'] = lq_paths
-        results['gt_path'] = gt_paths
+        lq_path_root = results["lq_path"]
+        gt_path_root = results["gt_path"]
+        lq_paths = [osp.join(lq_path_root, clip_name, f"{self.filename_tmpl.format(idx)}.png") for idx in frame_list]
+        gt_paths = [osp.join(gt_path_root, clip_name, f"{frame_name}.png")]
+        results["lq_path"] = lq_paths
+        results["gt_path"] = gt_paths
 
         return results
 
@@ -924,12 +892,11 @@ class GenerateFrameIndices:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        clip_name, frame_name = results['key'].split(
-            os.sep)  # key example: 000/00000000
+        clip_name, frame_name = results["key"].split(os.sep)  # key example: 000/00000000
         center_frame_idx = int(frame_name)
-        num_half_frames = results['num_input_frames'] // 2
+        num_half_frames = results["num_input_frames"] // 2
 
-        max_frame_num = results.get('max_frame_num', self.frames_per_clip + 1)
+        max_frame_num = results.get("max_frame_num", self.frames_per_clip + 1)
         frames_per_clip = min(self.frames_per_clip, max_frame_num - 1)
 
         interval = np.random.choice(self.interval_list)
@@ -940,28 +907,28 @@ class GenerateFrameIndices:
             center_frame_idx = np.random.randint(0, frames_per_clip + 1)
             start_frame_idx = center_frame_idx - num_half_frames * interval
             end_frame_idx = center_frame_idx + num_half_frames * interval
-        frame_name = f'{center_frame_idx:08d}'
+        frame_name = f"{center_frame_idx:08d}"
         neighbor_list = list(
-            range(center_frame_idx - num_half_frames * interval,
-                  center_frame_idx + num_half_frames * interval + 1, interval))
+            range(
+                center_frame_idx - num_half_frames * interval,
+                center_frame_idx + num_half_frames * interval + 1,
+                interval,
+            )
+        )
 
-        lq_path_root = results['lq_path']
-        gt_path_root = results['gt_path']
-        lq_path = [
-            osp.join(lq_path_root, clip_name, f'{v:08d}.png')
-            for v in neighbor_list
-        ]
-        gt_path = [osp.join(gt_path_root, clip_name, f'{frame_name}.png')]
-        results['lq_path'] = lq_path
-        results['gt_path'] = gt_path
-        results['interval'] = interval
+        lq_path_root = results["lq_path"]
+        gt_path_root = results["gt_path"]
+        lq_path = [osp.join(lq_path_root, clip_name, f"{v:08d}.png") for v in neighbor_list]
+        gt_path = [osp.join(gt_path_root, clip_name, f"{frame_name}.png")]
+        results["lq_path"] = lq_path
+        results["gt_path"] = gt_path
+        results["interval"] = interval
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(interval_list={self.interval_list}, '
-                     f'frames_per_clip={self.frames_per_clip})')
+        repr_str += f"(interval_list={self.interval_list}, " f"frames_per_clip={self.frames_per_clip})"
         return repr_str
 
 
@@ -998,13 +965,13 @@ class TemporalReverse:
             for key in self.keys:
                 results[key].reverse()
 
-        results['reverse'] = reverse
+        results["reverse"] = reverse
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(keys={self.keys}, reverse_ratio={self.reverse_ratio})'
+        repr_str += f"(keys={self.keys}, reverse_ratio={self.reverse_ratio})"
         return repr_str
 
 
@@ -1025,7 +992,7 @@ class GenerateSegmentIndices:
         filename_tmpl (str): Template for file name. Default: '{:08d}.png'.
     """
 
-    def __init__(self, interval_list, start_idx=0, filename_tmpl='{:08d}.png'):
+    def __init__(self, interval_list, start_idx=0, filename_tmpl="{:08d}.png"):
         self.interval_list = interval_list
         self.filename_tmpl = filename_tmpl
         self.start_idx = start_idx
@@ -1041,45 +1008,39 @@ class GenerateSegmentIndices:
             dict: A dict containing the processed data and information.
         """
         # key example: '000', 'calendar' (sequence name)
-        clip_name = results['key']
+        clip_name = results["key"]
         interval = np.random.choice(self.interval_list)
 
-        self.sequence_length = results['sequence_length']
-        num_input_frames = results.get('num_input_frames',
-                                       self.sequence_length)
+        self.sequence_length = results["sequence_length"]
+        num_input_frames = results.get("num_input_frames", self.sequence_length)
 
         # randomly select a frame as start
         if self.sequence_length - num_input_frames * interval < 0:
-            raise ValueError('The input sequence is not long enough to '
-                             'support the current choice of [interval] or '
-                             '[num_input_frames].')
-        start_frame_idx = np.random.randint(
-            0, self.sequence_length - num_input_frames * interval + 1)
+            raise ValueError(
+                "The input sequence is not long enough to "
+                "support the current choice of [interval] or "
+                "[num_input_frames]."
+            )
+        start_frame_idx = np.random.randint(0, self.sequence_length - num_input_frames * interval + 1)
         end_frame_idx = start_frame_idx + num_input_frames * interval
         neighbor_list = list(range(start_frame_idx, end_frame_idx, interval))
         neighbor_list = [v + self.start_idx for v in neighbor_list]
 
         # add the corresponding file paths
-        lq_path_root = results['lq_path']
-        gt_path_root = results['gt_path']
-        lq_path = [
-            osp.join(lq_path_root, clip_name, self.filename_tmpl.format(v))
-            for v in neighbor_list
-        ]
-        gt_path = [
-            osp.join(gt_path_root, clip_name, self.filename_tmpl.format(v))
-            for v in neighbor_list
-        ]
+        lq_path_root = results["lq_path"]
+        gt_path_root = results["gt_path"]
+        lq_path = [osp.join(lq_path_root, clip_name, self.filename_tmpl.format(v)) for v in neighbor_list]
+        gt_path = [osp.join(gt_path_root, clip_name, self.filename_tmpl.format(v)) for v in neighbor_list]
 
-        results['lq_path'] = lq_path
-        results['gt_path'] = gt_path
-        results['interval'] = interval
+        results["lq_path"] = lq_path
+        results["gt_path"] = gt_path
+        results["interval"] = interval
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(interval_list={self.interval_list})')
+        repr_str += f"(interval_list={self.interval_list})"
         return repr_str
 
 
@@ -1111,14 +1072,13 @@ class MirrorSequence:
             if isinstance(results[key], list):
                 results[key] = results[key] + results[key][::-1]
             else:
-                raise TypeError('The input must be of class list[nparray]. '
-                                f'Got {type(results[key])}.')
+                raise TypeError("The input must be of class list[nparray]. " f"Got {type(results[key])}.")
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys})')
+        repr_str += f"(keys={self.keys})"
         return repr_str
 
 
@@ -1143,8 +1103,7 @@ class CopyValues:
             raise AssertionError('"src_keys" and "dst_keys" must be lists.')
 
         if len(src_keys) != len(dst_keys):
-            raise ValueError('"src_keys" and "dst_keys" should have the same'
-                             'number of elements.')
+            raise ValueError('"src_keys" and "dst_keys" should have the same' "number of elements.")
 
         self.src_keys = src_keys
         self.dst_keys = dst_keys
@@ -1166,8 +1125,8 @@ class CopyValues:
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(src_keys={self.src_keys})')
-        repr_str += (f'(dst_keys={self.dst_keys})')
+        repr_str += f"(src_keys={self.src_keys})"
+        repr_str += f"(dst_keys={self.dst_keys})"
         return repr_str
 
 
@@ -1193,7 +1152,7 @@ class Quantize:
             input_ = [input_]
 
         # quantize and clip
-        input_ = [np.clip((v * 255.0).round(), 0, 255) / 255. for v in input_]
+        input_ = [np.clip((v * 255.0).round(), 0, 255) / 255.0 for v in input_]
 
         if is_single_image:
             input_ = input_[0]
@@ -1240,8 +1199,7 @@ class UnsharpMasking:
 
     def __init__(self, kernel_size, sigma, weight, threshold, keys):
         if kernel_size % 2 == 0:
-            raise ValueError('kernel_size must be an odd number, but '
-                             f'got {kernel_size}.')
+            raise ValueError("kernel_size must be an odd number, but " f"got {kernel_size}.")
 
         self.kernel_size = kernel_size
         self.sigma = sigma
@@ -1274,13 +1232,15 @@ class UnsharpMasking:
 
     def __call__(self, results):
         for key in self.keys:
-            results[f'{key}_unsharp'] = self._unsharp_masking(results[key])
+            results[f"{key}_unsharp"] = self._unsharp_masking(results[key])
 
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, kernel_size={self.kernel_size}, '
-                     f'sigma={self.sigma}, weight={self.weight}, '
-                     f'threshold={self.threshold})')
+        repr_str += (
+            f"(keys={self.keys}, kernel_size={self.kernel_size}, "
+            f"sigma={self.sigma}, weight={self.weight}, "
+            f"threshold={self.threshold})"
+        )
         return repr_str

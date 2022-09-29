@@ -16,9 +16,10 @@ from .dataset_wrappers import RepeatDataset
 from .registry import DATASETS
 from .samplers import DistributedSampler
 
-if platform.system() != 'Windows':
+if platform.system() != "Windows":
     # https://github.com/pytorch/pytorch/issues/973
     import resource
+
     rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
     base_soft_limit = rlimit[0]
     hard_limit = rlimit[1]
@@ -37,13 +38,13 @@ def _concat_dataset(cfg, default_args=None):
     Returns:
         Dataset: The concatenated dataset.
     """
-    ann_files = cfg['ann_file']
+    ann_files = cfg["ann_file"]
 
     datasets = []
     num_dset = len(ann_files)
     for i in range(num_dset):
         data_cfg = copy.deepcopy(cfg)
-        data_cfg['ann_file'] = ann_files[i]
+        data_cfg["ann_file"] = ann_files[i]
         datasets.append(build_dataset(data_cfg, default_args))
 
     return ConcatDataset(datasets)
@@ -69,10 +70,9 @@ def build_dataset(cfg, default_args=None):
     """
     if isinstance(cfg, (list, tuple)):
         dataset = ConcatDataset([build_dataset(c, default_args) for c in cfg])
-    elif cfg['type'] == 'RepeatDataset':
-        dataset = RepeatDataset(
-            build_dataset(cfg['dataset'], default_args), cfg['times'])
-    elif isinstance(cfg.get('ann_file'), (list, tuple)):
+    elif cfg["type"] == "RepeatDataset":
+        dataset = RepeatDataset(build_dataset(cfg["dataset"], default_args), cfg["times"])
+    elif isinstance(cfg.get("ann_file"), (list, tuple)):
         dataset = _concat_dataset(cfg, default_args)
     else:
         dataset = build_from_cfg(cfg, DATASETS, default_args)
@@ -80,17 +80,19 @@ def build_dataset(cfg, default_args=None):
     return dataset
 
 
-def build_dataloader(dataset,
-                     samples_per_gpu,
-                     workers_per_gpu,
-                     num_gpus=1,
-                     dist=True,
-                     shuffle=True,
-                     seed=None,
-                     drop_last=False,
-                     pin_memory=True,
-                     persistent_workers=True,
-                     **kwargs):
+def build_dataloader(
+    dataset,
+    samples_per_gpu,
+    workers_per_gpu,
+    num_gpus=1,
+    dist=True,
+    shuffle=True,
+    seed=None,
+    drop_last=False,
+    pin_memory=True,
+    persistent_workers=True,
+    **kwargs
+):
     """Build PyTorch DataLoader.
 
     In distributed training, each GPU/process has a dataloader.
@@ -126,12 +128,8 @@ def build_dataloader(dataset,
     rank, world_size = get_dist_info()
     if dist:
         sampler = DistributedSampler(
-            dataset,
-            world_size,
-            rank,
-            shuffle=shuffle,
-            samples_per_gpu=samples_per_gpu,
-            seed=seed)
+            dataset, world_size, rank, shuffle=shuffle, samples_per_gpu=samples_per_gpu, seed=seed
+        )
         shuffle = False
         batch_size = samples_per_gpu
         num_workers = workers_per_gpu
@@ -140,12 +138,10 @@ def build_dataloader(dataset,
         batch_size = num_gpus * samples_per_gpu
         num_workers = num_gpus * workers_per_gpu
 
-    init_fn = partial(
-        worker_init_fn, num_workers=num_workers, rank=rank,
-        seed=seed) if seed is not None else None
+    init_fn = partial(worker_init_fn, num_workers=num_workers, rank=rank, seed=seed) if seed is not None else None
 
-    if version.parse(torch.__version__) >= version.parse('1.7.0'):
-        kwargs['persistent_workers'] = persistent_workers
+    if version.parse(torch.__version__) >= version.parse("1.7.0"):
+        kwargs["persistent_workers"] = persistent_workers
 
     data_loader = DataLoader(
         dataset,
@@ -157,7 +153,8 @@ def build_dataloader(dataset,
         shuffle=shuffle,
         worker_init_fn=init_fn,
         drop_last=drop_last,
-        **kwargs)
+        **kwargs
+    )
 
     return data_loader
 

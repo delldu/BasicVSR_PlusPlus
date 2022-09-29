@@ -10,29 +10,29 @@ def test_deepfill_enc():
     x = torch.randn((2, 5, 256, 256))
     outputs = encoder(x)
     assert isinstance(outputs, dict)
-    assert 'out' in outputs
-    res = outputs['out']
+    assert "out" in outputs
+    res = outputs["out"]
     assert res.shape == (2, 128, 64, 64)
     assert encoder.enc2.stride == (2, 2)
     assert encoder.enc2.out_channels == 64
 
-    encoder = DeepFillEncoder(encoder_type='stage2_conv')
+    encoder = DeepFillEncoder(encoder_type="stage2_conv")
     x = torch.randn((2, 5, 256, 256))
     outputs = encoder(x)
     assert isinstance(outputs, dict)
-    assert 'out' in outputs
-    res = outputs['out']
+    assert "out" in outputs
+    res = outputs["out"]
     assert res.shape == (2, 128, 64, 64)
     assert encoder.enc2.out_channels == 32
     assert encoder.enc3.out_channels == 64
     assert encoder.enc4.out_channels == 64
 
-    encoder = DeepFillEncoder(encoder_type='stage2_attention')
+    encoder = DeepFillEncoder(encoder_type="stage2_attention")
     x = torch.randn((2, 5, 256, 256))
     outputs = encoder(x)
     assert isinstance(outputs, dict)
-    assert 'out' in outputs
-    res = outputs['out']
+    assert "out" in outputs
+    res = outputs["out"]
     assert res.shape == (2, 128, 64, 64)
     assert encoder.enc2.out_channels == 32
     assert encoder.enc3.out_channels == 64
@@ -42,41 +42,40 @@ def test_deepfill_enc():
         x = torch.randn((2, 5, 256, 256)).cuda()
         outputs = encoder(x)
         assert isinstance(outputs, dict)
-        assert 'out' in outputs
-        res = outputs['out']
+        assert "out" in outputs
+        res = outputs["out"]
         assert res.shape == (2, 128, 64, 64)
         assert encoder.enc2.stride == (2, 2)
         assert encoder.enc2.out_channels == 64
 
-        encoder = DeepFillEncoder(encoder_type='stage2_conv').cuda()
+        encoder = DeepFillEncoder(encoder_type="stage2_conv").cuda()
         x = torch.randn((2, 5, 256, 256)).cuda()
         outputs = encoder(x)
         assert isinstance(outputs, dict)
-        assert 'out' in outputs
-        res = outputs['out']
+        assert "out" in outputs
+        res = outputs["out"]
         assert res.shape == (2, 128, 64, 64)
         assert encoder.enc2.out_channels == 32
         assert encoder.enc3.out_channels == 64
         assert encoder.enc4.out_channels == 64
 
-        encoder = DeepFillEncoder(encoder_type='stage2_attention').cuda()
+        encoder = DeepFillEncoder(encoder_type="stage2_attention").cuda()
         x = torch.randn((2, 5, 256, 256)).cuda()
         outputs = encoder(x)
         assert isinstance(outputs, dict)
-        assert 'out' in outputs
-        res = outputs['out']
+        assert "out" in outputs
+        res = outputs["out"]
         assert res.shape == (2, 128, 64, 64)
         assert encoder.enc2.out_channels == 32
         assert encoder.enc3.out_channels == 64
         assert encoder.enc4.out_channels == 128
 
-        encoder = DeepFillEncoder(
-            conv_type='gated_conv', channel_factor=0.75).cuda()
+        encoder = DeepFillEncoder(conv_type="gated_conv", channel_factor=0.75).cuda()
         x = torch.randn((2, 5, 256, 256)).cuda()
         outputs = encoder(x)
         assert isinstance(outputs, dict)
-        assert 'out' in outputs
-        res = outputs['out']
+        assert "out" in outputs
+        res = outputs["out"]
         assert res.shape == (2, 96, 64, 64)
         assert isinstance(encoder.enc2, SimpleGatedConvModule)
         assert encoder.enc2.conv.stride == (2, 2)
@@ -88,7 +87,7 @@ def test_deepfill_contextual_attention_neck():
     neck = ContextualAttentionNeck(in_channels=128)
     x = torch.rand((2, 128, 64, 64))
     mask = torch.zeros((2, 1, 64, 64))
-    mask[..., 20:100, 23:90] = 1.
+    mask[..., 20:100, 23:90] = 1.0
 
     res, offset = neck(x, mask)
 
@@ -102,8 +101,7 @@ def test_deepfill_contextual_attention_neck():
         assert res.shape == (2, 128, 64, 64)
         assert offset.shape == (2, 32, 32, 32, 32)
 
-        neck = ContextualAttentionNeck(
-            in_channels=128, conv_type='gated_conv').cuda()
+        neck = ContextualAttentionNeck(in_channels=128, conv_type="gated_conv").cuda()
         res, offset = neck(x.cuda(), mask.cuda())
         assert res.shape == (2, 128, 64, 64)
         assert offset.shape == (2, 32, 32, 32, 32)

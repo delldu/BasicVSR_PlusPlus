@@ -19,8 +19,20 @@ import mmcv
 MMEditing_ROOT = osp.dirname(osp.dirname(osp.dirname(__file__)))
 
 all_training_data = [
-    'div2k', 'celeba', 'places', 'comp1k', 'vimeo90k', 'reds', 'ffhq', 'cufed',
-    'cat', 'facades', 'summer2winter', 'horse2zebra', 'maps', 'edges2shoes'
+    "div2k",
+    "celeba",
+    "places",
+    "comp1k",
+    "vimeo90k",
+    "reds",
+    "ffhq",
+    "cufed",
+    "cat",
+    "facades",
+    "summer2winter",
+    "horse2zebra",
+    "maps",
+    "edges2shoes",
 ]
 
 
@@ -35,14 +47,12 @@ def dump_yaml_and_check_difference(obj, file):
         Bool: If the target YAML file is different from the original.
     """
 
-    str_dump = mmcv.dump(
-        obj, None, file_format='yaml', sort_keys=True,
-        line_break='\n')  # force use LF
+    str_dump = mmcv.dump(obj, None, file_format="yaml", sort_keys=True, line_break="\n")  # force use LF
 
     if osp.isfile(file):
         file_exists = True
-        print(f'    exist {file}')
-        with open(file, 'r', encoding='utf-8') as f:
+        print(f"    exist {file}")
+        with open(file, "r", encoding="utf-8") as f:
             str_orig = f.read()
     else:
         file_exists = False
@@ -52,8 +62,8 @@ def dump_yaml_and_check_difference(obj, file):
         is_different = False
     else:
         is_different = True
-        print(f'    update {file}')
-        with open(file, 'w', encoding='utf-8') as f:
+        print(f"    update {file}")
+        with open(file, "w", encoding="utf-8") as f:
             f.write(str_dump)
 
     return is_different
@@ -70,7 +80,7 @@ def collate_metrics(keys):
     """
     used_metrics = dict()
     for idx, key in enumerate(keys):
-        if key in ['Method', 'Download']:
+        if key in ["Method", "Download"]:
             continue
         used_metrics[key] = idx
     return used_metrics
@@ -85,11 +95,11 @@ def get_task_name(md_file):
     Returns:
         Str: Task name.
     """
-    layers = re.split(r'[\\/]', md_file)
+    layers = re.split(r"[\\/]", md_file)
     for i in range(len(layers) - 1):
-        if layers[i] == 'configs':
+        if layers[i] == "configs":
             return layers[i + 1].capitalize()
-    return 'Unknown'
+    return "Unknown"
 
 
 def generate_unique_name(md_file):
@@ -102,14 +112,13 @@ def generate_unique_name(md_file):
         dict: dict of unique name for each config file.
     """
     files = os.listdir(osp.dirname(md_file))
-    config_files = [f[:-3] for f in files if f[-3:] == '.py']
+    config_files = [f[:-3] for f in files if f[-3:] == ".py"]
     config_files.sort()
     config_files.sort(key=lambda x: len(x))
-    split_names = [f.split('_') for f in config_files]
-    config_sets = [set(f.split('_')) for f in config_files]
+    split_names = [f.split("_") for f in config_files]
+    config_sets = [set(f.split("_")) for f in config_files]
     common_set = reduce(lambda x, y: x & y, config_sets)
-    unique_lists = [[n for n in name if n not in common_set]
-                    for name in split_names]
+    unique_lists = [[n for n in name if n not in common_set] for name in split_names]
 
     unique_dict = dict()
     name_list = []
@@ -118,7 +127,7 @@ def generate_unique_name(md_file):
         unique_dict[f] = base
         if len(unique_lists[i]) > 0:
             for unique in unique_lists[i]:
-                candidate_name = f'{base}_{unique}'
+                candidate_name = f"{base}_{unique}"
                 if candidate_name not in name_list and base != unique:
                     unique_dict[f] = candidate_name
                     name_list.append(candidate_name)
@@ -139,63 +148,61 @@ def parse_md(md_file):
 
     collection_name = osp.splitext(osp.basename(md_file))[0]
     readme = osp.relpath(md_file, MMEditing_ROOT)
-    readme = readme.replace('\\', '/')  # for windows
-    collection = dict(
-        Name=collection_name,
-        Metadata={'Architecture': []},
-        README=readme,
-        Paper=[])
+    readme = readme.replace("\\", "/")  # for windows
+    collection = dict(Name=collection_name, Metadata={"Architecture": []}, README=readme, Paper=[])
     models = []
     # force utf-8 instead of system defined
-    with open(md_file, 'r', encoding='utf-8') as md:
+    with open(md_file, "r", encoding="utf-8") as md:
         lines = md.readlines()
         i = 0
         name = lines[0][2:]
-        name = name.split('(', 1)[0].strip()
-        collection['Metadata']['Architecture'].append(name)
-        collection['Name'] = name
+        name = name.split("(", 1)[0].strip()
+        collection["Metadata"]["Architecture"].append(name)
+        collection["Name"] = name
         collection_name = name
         while i < len(lines):
             # parse reference
-            if lines[i].startswith('> ['):
-                url = re.match(r'> \[.*]\((.*)\)', lines[i])
+            if lines[i].startswith("> ["):
+                url = re.match(r"> \[.*]\((.*)\)", lines[i])
                 url = url.groups()[0]
-                collection['Paper'].append(url)
+                collection["Paper"].append(url)
                 i += 1
 
             # parse table
-            elif lines[i][0] == '|' and i + 1 < len(lines) and \
-                    (lines[i + 1][:3] == '| :' or lines[i + 1][:2] == '|:'
-                        or lines[i + 1][:2] == '|-'):
-                cols = [col.strip() for col in lines[i].split('|')][1:-1]
-                config_idx = cols.index('Method')
-                checkpoint_idx = cols.index('Download')
+            elif (
+                lines[i][0] == "|"
+                and i + 1 < len(lines)
+                and (lines[i + 1][:3] == "| :" or lines[i + 1][:2] == "|:" or lines[i + 1][:2] == "|-")
+            ):
+                cols = [col.strip() for col in lines[i].split("|")][1:-1]
+                config_idx = cols.index("Method")
+                checkpoint_idx = cols.index("Download")
                 try:
-                    flops_idx = cols.index('FLOPs')
+                    flops_idx = cols.index("FLOPs")
                 except ValueError:
                     flops_idx = -1
                 try:
-                    params_idx = cols.index('Params')
+                    params_idx = cols.index("Params")
                 except ValueError:
                     params_idx = -1
                 used_metrics = collate_metrics(cols)
 
                 j = i + 2
-                while j < len(lines) and lines[j][0] == '|':
+                while j < len(lines) and lines[j][0] == "|":
                     task = get_task_name(md_file)
-                    line = lines[j].split('|')[1:-1]
+                    line = lines[j].split("|")[1:-1]
 
-                    if line[config_idx].find('](') >= 0:
-                        left = line[config_idx].index('](') + 2
-                        right = line[config_idx].index(')', left)
-                        config = line[config_idx][left:right].strip('./')
-                    elif line[config_idx].find('△') == -1:
+                    if line[config_idx].find("](") >= 0:
+                        left = line[config_idx].index("](") + 2
+                        right = line[config_idx].index(")", left)
+                        config = line[config_idx][left:right].strip("./")
+                    elif line[config_idx].find("△") == -1:
                         j += 1
                         continue
 
-                    if line[checkpoint_idx].find('](') >= 0:
-                        left = line[checkpoint_idx].index('model](') + 7
-                        right = line[checkpoint_idx].index(')', left)
+                    if line[checkpoint_idx].find("](") >= 0:
+                        left = line[checkpoint_idx].index("model](") + 7
+                        right = line[checkpoint_idx].index(")", left)
                         checkpoint = line[checkpoint_idx][left:right]
 
                     name_key = osp.splitext(osp.basename(config))[0]
@@ -211,54 +218,42 @@ def parse_md(md_file):
                     #         'please check it again.')
 
                     # find dataset in config file
-                    dataset = 'Others'
+                    dataset = "Others"
                     config_low = config.lower()
                     for d in all_training_data:
                         if d in config_low:
                             dataset = d.upper()
                             break
-                    metadata = {'Training Data': dataset}
+                    metadata = {"Training Data": dataset}
                     if flops_idx != -1:
-                        metadata['FLOPs'] = float(line[flops_idx])
+                        metadata["FLOPs"] = float(line[flops_idx])
                     if params_idx != -1:
-                        metadata['Parameters'] = float(line[params_idx])
+                        metadata["Parameters"] = float(line[params_idx])
 
                     metrics = {}
 
                     for key in used_metrics:
                         metrics_data = line[used_metrics[key]]
-                        metrics_data = metrics_data.replace('*', '')
-                        if '/' not in metrics_data:
+                        metrics_data = metrics_data.replace("*", "")
+                        if "/" not in metrics_data:
                             try:
                                 metrics[key] = float(metrics_data)
                             except ValueError:
-                                metrics_data = metrics_data.replace(' ', '')
+                                metrics_data = metrics_data.replace(" ", "")
                         else:
                             try:
-                                metrics_data = [
-                                    float(d) for d in metrics_data.split('/')
-                                ]
-                                metrics[key] = dict(
-                                    PSNR=metrics_data[0], SSIM=metrics_data[1])
+                                metrics_data = [float(d) for d in metrics_data.split("/")]
+                                metrics[key] = dict(PSNR=metrics_data[0], SSIM=metrics_data[1])
                             except ValueError:
                                 pass
 
                     model = {
-                        'Name':
-                        model_name,
-                        'In Collection':
-                        collection_name,
-                        'Config':
-                        config,
-                        'Metadata':
-                        metadata,
-                        'Results': [{
-                            'Task': task,
-                            'Dataset': dataset,
-                            'Metrics': metrics
-                        }],
-                        'Weights':
-                        checkpoint
+                        "Name": model_name,
+                        "In Collection": collection_name,
+                        "Config": config,
+                        "Metadata": metadata,
+                        "Results": [{"Task": task, "Dataset": dataset, "Metrics": metrics}],
+                        "Weights": checkpoint,
                     }
                     models.append(model)
                     j += 1
@@ -268,10 +263,10 @@ def parse_md(md_file):
                 i += 1
 
     if len(models) == 0:
-        warnings.warn('no model is found in this md file')
+        warnings.warn("no model is found in this md file")
 
-    result = {'Collections': [collection], 'Models': models}
-    yml_file = md_file.replace('README.md', 'metafile.yml')
+    result = {"Collections": [collection], "Models": models}
+    yml_file = md_file.replace("README.md", "metafile.yml")
 
     is_different = dump_yaml_and_check_difference(result, yml_file)
     return is_different
@@ -283,41 +278,36 @@ def update_model_index():
     Returns:
         Bool: If the updated model-index.yml is different from the original.
     """
-    configs_dir = osp.join(MMEditing_ROOT, 'configs')
-    yml_files = glob.glob(osp.join(configs_dir, '**', '*.yml'), recursive=True)
+    configs_dir = osp.join(MMEditing_ROOT, "configs")
+    yml_files = glob.glob(osp.join(configs_dir, "**", "*.yml"), recursive=True)
     yml_files.sort()
 
     model_index = {
-        'Import': [
-            osp.relpath(yml_file, MMEditing_ROOT).replace(
-                '\\', '/')  # force using / as path separators
+        "Import": [
+            osp.relpath(yml_file, MMEditing_ROOT).replace("\\", "/")  # force using / as path separators
             for yml_file in yml_files
         ]
     }
-    model_index_file = osp.join(MMEditing_ROOT, 'model-index.yml')
-    is_different = dump_yaml_and_check_difference(model_index,
-                                                  model_index_file)
+    model_index_file = osp.join(MMEditing_ROOT, "model-index.yml")
+    is_different = dump_yaml_and_check_difference(model_index, model_index_file)
 
     return is_different
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) <= 1:
-        configs_root = osp.join(MMEditing_ROOT, 'configs')
-        file_list = glob.glob(
-            osp.join(configs_root, '**', '*README.md'), recursive=True)
+        configs_root = osp.join(MMEditing_ROOT, "configs")
+        file_list = glob.glob(osp.join(configs_root, "**", "*README.md"), recursive=True)
         file_list.sort()
     else:
-        file_list = [
-            fn for fn in sys.argv[1:] if osp.basename(fn) == 'README.md'
-        ]
+        file_list = [fn for fn in sys.argv[1:] if osp.basename(fn) == "README.md"]
 
     if not file_list:
         sys.exit(0)
 
     file_modified = False
     for fn in file_list:
-        print(f'process {fn}')
+        print(f"process {fn}")
         file_modified |= parse_md(fn)
 
     file_modified |= update_model_index()

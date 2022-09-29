@@ -24,7 +24,7 @@ def reduce_loss(loss, reduction):
     return loss.sum()
 
 
-def mask_reduce_loss(loss, weight=None, reduction='mean', sample_wise=False):
+def mask_reduce_loss(loss, weight=None, reduction="mean", sample_wise=False):
     """Apply element-wise weight and reduce loss.
 
     Args:
@@ -48,10 +48,10 @@ def mask_reduce_loss(loss, weight=None, reduction='mean', sample_wise=False):
         loss = loss * weight
 
     # if weight is not specified or reduction is sum, just reduce the loss
-    if weight is None or reduction == 'sum':
+    if weight is None or reduction == "sum":
         loss = reduce_loss(loss, reduction)
     # if reduction is mean, then compute mean over masked region
-    elif reduction == 'mean':
+    elif reduction == "mean":
         # expand weight from N1HW to NCHW
         if weight.size(1) == 1:
             weight = weight.expand_as(loss)
@@ -101,12 +101,7 @@ def masked_loss(loss_func):
     """
 
     @functools.wraps(loss_func)
-    def wrapper(pred,
-                target,
-                weight=None,
-                reduction='mean',
-                sample_wise=False,
-                **kwargs):
+    def wrapper(pred, target, weight=None, reduction="mean", sample_wise=False, **kwargs):
         # get element-wise loss
         loss = loss_func(pred, target, **kwargs)
         loss = mask_reduce_loss(loss, weight, reduction, sample_wise)

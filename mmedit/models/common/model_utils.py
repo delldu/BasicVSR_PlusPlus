@@ -42,23 +42,22 @@ def extract_bbox_patch(bbox, img, channel_first=True):
         assert len(bbox) == 4
         t, l, h, w = bbox
         if channel_first:
-            img_patch = img[..., t:t + h, l:l + w]
+            img_patch = img[..., t : t + h, l : l + w]
         else:
-            img_patch = img[t:t + h, l:l + w, ...]
+            img_patch = img[t : t + h, l : l + w, ...]
 
         return img_patch
 
     input_size = img.shape
     assert len(input_size) == 3 or len(input_size) == 4
     bbox_size = bbox.shape
-    assert bbox_size == (4, ) or (len(bbox_size) == 2
-                                  and bbox_size[0] == input_size[0])
+    assert bbox_size == (4,) or (len(bbox_size) == 2 and bbox_size[0] == input_size[0])
 
     # images with batch dimension
     if len(input_size) == 4:
         output_list = []
         for i in range(input_size[0]):
-            img_patch_ = _extract(bbox[i], img[i:i + 1, ...])
+            img_patch_ = _extract(bbox[i], img[i : i + 1, ...])
             output_list.append(img_patch_)
         if isinstance(img, torch.Tensor):
             img_patch = torch.cat(output_list, dim=0)
@@ -105,8 +104,7 @@ def scale_bbox(bbox, target_size):
     elif isinstance(bbox, np.ndarray):
         bbox_new = np.zeros_like(bbox)
     else:
-        raise TypeError('bbox mush be torch.Tensor or numpy.ndarray'
-                        f'but got type {type(bbox)}')
+        raise TypeError("bbox mush be torch.Tensor or numpy.ndarray" f"but got type {type(bbox)}")
     bbox_shape = list(bbox.shape)
 
     if len(bbox_shape) == 2:

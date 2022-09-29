@@ -9,7 +9,7 @@ from mmedit.models import build_component
 
 
 def test_ttsr_dict():
-    cfg = dict(type='TTSRDiscriminator', in_channels=3, in_size=160)
+    cfg = dict(type="TTSRDiscriminator", in_channels=3, in_size=160)
     net = build_component(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -31,12 +31,13 @@ def test_ttsr_dict():
 def test_patch_discriminator():
     # color, BN
     cfg = dict(
-        type='PatchDiscriminator',
+        type="PatchDiscriminator",
         in_channels=3,
         base_channels=64,
         num_conv=3,
-        norm_cfg=dict(type='BN'),
-        init_cfg=dict(type='normal', gain=0.02))
+        norm_cfg=dict(type="BN"),
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_component(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -57,12 +58,13 @@ def test_patch_discriminator():
 
     # gray, IN
     cfg = dict(
-        type='PatchDiscriminator',
+        type="PatchDiscriminator",
         in_channels=1,
         base_channels=64,
         num_conv=3,
-        norm_cfg=dict(type='IN'),
-        init_cfg=dict(type='normal', gain=0.02))
+        norm_cfg=dict(type="IN"),
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_component(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -83,22 +85,17 @@ def test_patch_discriminator():
 
     # test norm_cfg assertions
     bad_cfg = copy.deepcopy(cfg)
-    bad_cfg['norm_cfg'] = None
+    bad_cfg["norm_cfg"] = None
     with pytest.raises(AssertionError):
         _ = build_component(bad_cfg)
-    bad_cfg['norm_cfg'] = dict(tp='BN')
+    bad_cfg["norm_cfg"] = dict(tp="BN")
     with pytest.raises(AssertionError):
         _ = build_component(bad_cfg)
 
 
 def test_smpatch_discriminator():
     # color, BN
-    cfg = dict(
-        type='SoftMaskPatchDiscriminator',
-        in_channels=3,
-        base_channels=64,
-        num_conv=3,
-        with_spectral_norm=True)
+    cfg = dict(type="SoftMaskPatchDiscriminator", in_channels=3, base_channels=64, num_conv=3, with_spectral_norm=True)
     net = build_component(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -118,12 +115,7 @@ def test_smpatch_discriminator():
         net.init_weights(pretrained=[1])
 
     # gray, IN
-    cfg = dict(
-        type='SoftMaskPatchDiscriminator',
-        in_channels=1,
-        base_channels=64,
-        num_conv=3,
-        with_spectral_norm=True)
+    cfg = dict(type="SoftMaskPatchDiscriminator", in_channels=1, base_channels=64, num_conv=3, with_spectral_norm=True)
     net = build_component(cfg)
     net.init_weights(pretrained=None)
     # cpu

@@ -6,8 +6,7 @@ import pytest
 import torch
 
 from mmedit.models import build_backbone
-from mmedit.models.common import (ResidualBlockWithDropout,
-                                  UnetSkipConnectionBlock)
+from mmedit.models.common import ResidualBlockWithDropout, UnetSkipConnectionBlock
 
 
 def test_unet_skip_connection_block():
@@ -18,8 +17,9 @@ def test_unet_skip_connection_block():
         submodule=None,
         is_outermost=False,
         is_innermost=False,
-        norm_cfg=dict(type='BN'),
-        use_dropout=True)
+        norm_cfg=dict(type="BN"),
+        use_dropout=True,
+    )
     feature_shape = (1, 1, 8, 8)
     feature = _demo_inputs(feature_shape)
     input_shape = (1, 3, 8, 8)
@@ -27,7 +27,7 @@ def test_unet_skip_connection_block():
 
     # innermost
     cfg = copy.deepcopy(_cfg)
-    cfg['is_innermost'] = True
+    cfg["is_innermost"] = True
     block = UnetSkipConnectionBlock(**cfg)
     # cpu
     output = block(feature)
@@ -41,7 +41,7 @@ def test_unet_skip_connection_block():
 
     # intermediate
     cfg = copy.deepcopy(_cfg)
-    cfg['submodule'] = block
+    cfg["submodule"] = block
     block = UnetSkipConnectionBlock(**cfg)
     # cpu
     output = block(feature)
@@ -55,10 +55,10 @@ def test_unet_skip_connection_block():
 
     # outermost
     cfg = copy.deepcopy(_cfg)
-    cfg['submodule'] = block
-    cfg['is_outermost'] = True
-    cfg['in_channels'] = 3
-    cfg['outer_channels'] = 3
+    cfg["submodule"] = block
+    cfg["is_outermost"] = True
+    cfg["in_channels"] = 3
+    cfg["outer_channels"] = 3
     block = UnetSkipConnectionBlock(**cfg)
     # cpu
     output = block(img)
@@ -72,18 +72,18 @@ def test_unet_skip_connection_block():
 
     # test cannot be both innermost and outermost
     cfg = copy.deepcopy(_cfg)
-    cfg['is_innermost'] = True
-    cfg['is_outermost'] = True
+    cfg["is_innermost"] = True
+    cfg["is_outermost"] = True
     with pytest.raises(AssertionError):
         _ = UnetSkipConnectionBlock(**cfg)
 
     # test norm_cfg assertions
     bad_cfg = copy.deepcopy(_cfg)
-    bad_cfg['is_innermost'] = True
-    bad_cfg['norm_cfg'] = None
+    bad_cfg["is_innermost"] = True
+    bad_cfg["norm_cfg"] = None
     with pytest.raises(AssertionError):
         _ = UnetSkipConnectionBlock(**bad_cfg)
-    bad_cfg['norm_cfg'] = dict(tp='BN')
+    bad_cfg["norm_cfg"] = dict(tp="BN")
     with pytest.raises(AssertionError):
         _ = UnetSkipConnectionBlock(**bad_cfg)
 
@@ -91,14 +91,15 @@ def test_unet_skip_connection_block():
 def test_unet_generator():
     # color to color
     cfg = dict(
-        type='UnetGenerator',
+        type="UnetGenerator",
         in_channels=3,
         out_channels=3,
         num_down=8,
         base_channels=64,
-        norm_cfg=dict(type='BN'),
+        norm_cfg=dict(type="BN"),
         use_dropout=True,
-        init_cfg=dict(type='normal', gain=0.02))
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_backbone(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -114,14 +115,15 @@ def test_unet_generator():
 
     # gray to color
     cfg = dict(
-        type='UnetGenerator',
+        type="UnetGenerator",
         in_channels=1,
         out_channels=3,
         num_down=8,
         base_channels=64,
-        norm_cfg=dict(type='BN'),
+        norm_cfg=dict(type="BN"),
         use_dropout=True,
-        init_cfg=dict(type='normal', gain=0.02))
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_backbone(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -137,14 +139,15 @@ def test_unet_generator():
 
     # color to gray
     cfg = dict(
-        type='UnetGenerator',
+        type="UnetGenerator",
         in_channels=3,
         out_channels=1,
         num_down=8,
         base_channels=64,
-        norm_cfg=dict(type='BN'),
+        norm_cfg=dict(type="BN"),
         use_dropout=True,
-        init_cfg=dict(type='normal', gain=0.02))
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_backbone(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -164,20 +167,16 @@ def test_unet_generator():
 
     # test norm_cfg assertions
     bad_cfg = copy.deepcopy(cfg)
-    bad_cfg['norm_cfg'] = None
+    bad_cfg["norm_cfg"] = None
     with pytest.raises(AssertionError):
         _ = build_backbone(bad_cfg)
-    bad_cfg['norm_cfg'] = dict(tp='BN')
+    bad_cfg["norm_cfg"] = dict(tp="BN")
     with pytest.raises(AssertionError):
         _ = build_backbone(bad_cfg)
 
 
 def test_residual_block_with_dropout():
-    _cfg = dict(
-        channels=3,
-        padding_mode='reflect',
-        norm_cfg=dict(type='BN'),
-        use_dropout=True)
+    _cfg = dict(channels=3, padding_mode="reflect", norm_cfg=dict(type="BN"), use_dropout=True)
     feature_shape = (1, 3, 32, 32)
     feature = _demo_inputs(feature_shape)
     # reflect padding, BN, use_dropout=True
@@ -194,7 +193,7 @@ def test_residual_block_with_dropout():
     # test other padding types
     # replicate padding
     cfg = copy.deepcopy(_cfg)
-    cfg['padding_mode'] = 'replicate'
+    cfg["padding_mode"] = "replicate"
     block = ResidualBlockWithDropout(**cfg)
     # cpu
     output = block(feature)
@@ -206,7 +205,7 @@ def test_residual_block_with_dropout():
         assert output.shape == (1, 3, 32, 32)
     # zero padding
     cfg = copy.deepcopy(_cfg)
-    cfg['padding_mode'] = 'zeros'
+    cfg["padding_mode"] = "zeros"
     block = ResidualBlockWithDropout(**cfg)
     # cpu
     output = block(feature)
@@ -218,13 +217,13 @@ def test_residual_block_with_dropout():
         assert output.shape == (1, 3, 32, 32)
     # not implemented padding
     cfg = copy.deepcopy(_cfg)
-    cfg['padding_mode'] = 'abc'
+    cfg["padding_mode"] = "abc"
     with pytest.raises(KeyError):
         block = ResidualBlockWithDropout(**cfg)
 
     # test other norm
     cfg = copy.deepcopy(_cfg)
-    cfg['norm_cfg'] = dict(type='IN')
+    cfg["norm_cfg"] = dict(type="IN")
     block = ResidualBlockWithDropout(**cfg)
     # cpu
     output = block(feature)
@@ -237,7 +236,7 @@ def test_residual_block_with_dropout():
 
     # test use_dropout=False
     cfg = copy.deepcopy(_cfg)
-    cfg['use_dropout'] = False
+    cfg["use_dropout"] = False
     block = ResidualBlockWithDropout(**cfg)
     # cpu
     output = block(feature)
@@ -250,10 +249,10 @@ def test_residual_block_with_dropout():
 
     # test norm_cfg assertions
     bad_cfg = copy.deepcopy(_cfg)
-    bad_cfg['norm_cfg'] = None
+    bad_cfg["norm_cfg"] = None
     with pytest.raises(AssertionError):
         _ = ResidualBlockWithDropout(**bad_cfg)
-    bad_cfg['norm_cfg'] = dict(tp='BN')
+    bad_cfg["norm_cfg"] = dict(tp="BN")
     with pytest.raises(AssertionError):
         _ = ResidualBlockWithDropout(**bad_cfg)
 
@@ -261,15 +260,16 @@ def test_residual_block_with_dropout():
 def test_resnet_generator():
     # color to color
     cfg = dict(
-        type='ResnetGenerator',
+        type="ResnetGenerator",
         in_channels=3,
         out_channels=3,
         base_channels=64,
-        norm_cfg=dict(type='IN'),
+        norm_cfg=dict(type="IN"),
         use_dropout=False,
         num_blocks=9,
-        padding_mode='reflect',
-        init_cfg=dict(type='normal', gain=0.02))
+        padding_mode="reflect",
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_backbone(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -285,15 +285,16 @@ def test_resnet_generator():
 
     # gray to color
     cfg = dict(
-        type='ResnetGenerator',
+        type="ResnetGenerator",
         in_channels=1,
         out_channels=3,
         base_channels=64,
-        norm_cfg=dict(type='IN'),
+        norm_cfg=dict(type="IN"),
         use_dropout=False,
         num_blocks=9,
-        padding_mode='reflect',
-        init_cfg=dict(type='normal', gain=0.02))
+        padding_mode="reflect",
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_backbone(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -309,15 +310,16 @@ def test_resnet_generator():
 
     # color to gray
     cfg = dict(
-        type='ResnetGenerator',
+        type="ResnetGenerator",
         in_channels=3,
         out_channels=1,
         base_channels=64,
-        norm_cfg=dict(type='IN'),
+        norm_cfg=dict(type="IN"),
         use_dropout=False,
         num_blocks=9,
-        padding_mode='reflect',
-        init_cfg=dict(type='normal', gain=0.02))
+        padding_mode="reflect",
+        init_cfg=dict(type="normal", gain=0.02),
+    )
     net = build_backbone(cfg)
     net.init_weights(pretrained=None)
     # cpu
@@ -333,7 +335,7 @@ def test_resnet_generator():
 
     # test num_blocks non-negative
     bad_cfg = copy.deepcopy(cfg)
-    bad_cfg['num_blocks'] = -1
+    bad_cfg["num_blocks"] = -1
     with pytest.raises(AssertionError):
         net = build_backbone(bad_cfg)
 
@@ -343,10 +345,10 @@ def test_resnet_generator():
 
     # test norm_cfg assertions
     bad_cfg = copy.deepcopy(cfg)
-    bad_cfg['norm_cfg'] = None
+    bad_cfg["norm_cfg"] = None
     with pytest.raises(AssertionError):
         _ = build_backbone(bad_cfg)
-    bad_cfg['norm_cfg'] = dict(tp='IN')
+    bad_cfg["norm_cfg"] = dict(tp="IN")
     with pytest.raises(AssertionError):
         _ = build_backbone(bad_cfg)
 

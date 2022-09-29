@@ -8,7 +8,7 @@ from mmedit.datasets.pipelines import Compose
 from mmedit.models import build_model
 
 
-def init_model(config, checkpoint=None, device='cuda:0'):
+def init_model(config, checkpoint=None, device="cuda:0"):
     """Initialize a model from config file.
 
     Args:
@@ -24,8 +24,7 @@ def init_model(config, checkpoint=None, device='cuda:0'):
     if isinstance(config, str):
         config = mmcv.Config.fromfile(config)
     elif not isinstance(config, mmcv.Config):
-        raise TypeError('config must be a filename or Config object, '
-                        f'but got {type(config)}')
+        raise TypeError("config must be a filename or Config object, " f"but got {type(config)}")
     config.model.pretrained = None
     config.test_cfg.metrics = None
     model = build_model(config.model, test_cfg=config.test_cfg)
@@ -52,17 +51,17 @@ def matting_inference(model, img, trimap):
     cfg = model.cfg
     device = next(model.parameters()).device  # model device
     # remove alpha from test_pipeline
-    keys_to_remove = ['alpha', 'ori_alpha']
+    keys_to_remove = ["alpha", "ori_alpha"]
     for key in keys_to_remove:
         for pipeline in list(cfg.test_pipeline):
-            if 'key' in pipeline and key == pipeline['key']:
+            if "key" in pipeline and key == pipeline["key"]:
                 cfg.test_pipeline.remove(pipeline)
-            if 'keys' in pipeline and key in pipeline['keys']:
-                pipeline['keys'].remove(key)
-                if len(pipeline['keys']) == 0:
+            if "keys" in pipeline and key in pipeline["keys"]:
+                pipeline["keys"].remove(key)
+                if len(pipeline["keys"]) == 0:
                     cfg.test_pipeline.remove(pipeline)
-            if 'meta_keys' in pipeline and key in pipeline['meta_keys']:
-                pipeline['meta_keys'].remove(key)
+            if "meta_keys" in pipeline and key in pipeline["meta_keys"]:
+                pipeline["meta_keys"].remove(key)
     # build the data pipeline
     test_pipeline = Compose(cfg.test_pipeline)
     # prepare data
@@ -73,4 +72,4 @@ def matting_inference(model, img, trimap):
     with torch.no_grad():
         result = model(test_mode=True, **data)
 
-    return result['pred_alpha']
+    return result["pred_alpha"]

@@ -13,7 +13,7 @@ def test_deepfill_encdec():
     if torch.cuda.is_available():
         img = torch.rand((2, 3, 256, 256)).cuda()
         mask = img.new_zeros((2, 1, 256, 256))
-        mask[..., 20:100, 30:120] = 1.
+        mask[..., 20:100, 30:120] = 1.0
         input_x = torch.cat([img, torch.ones_like(mask), mask], dim=1)
         encdec.cuda()
         stage1_res, stage2_res = encdec(input_x)

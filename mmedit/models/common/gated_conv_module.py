@@ -29,22 +29,23 @@ class SimpleGatedConvModule(nn.Module):
         kwargs (keyword arguments): Same as `ConvModule`.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 feat_act_cfg=dict(type='ELU'),
-                 gate_act_cfg=dict(type='Sigmoid'),
-                 **kwargs):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        feat_act_cfg=dict(type="ELU"),
+        gate_act_cfg=dict(type="Sigmoid"),
+        **kwargs
+    ):
         super().__init__()
         # the activation function should specified outside conv module
         kwargs_ = copy.deepcopy(kwargs)
-        kwargs_['act_cfg'] = None
+        kwargs_["act_cfg"] = None
         self.with_feat_act = feat_act_cfg is not None
         self.with_gate_act = gate_act_cfg is not None
 
-        self.conv = ConvModule(in_channels, out_channels * 2, kernel_size,
-                               **kwargs_)
+        self.conv = ConvModule(in_channels, out_channels * 2, kernel_size, **kwargs_)
 
         if self.with_feat_act:
             self.feat_act = build_activation_layer(feat_act_cfg)

@@ -7,13 +7,13 @@ from mmedit.models import build_backbone
 
 def test_tof_vfi_net():
 
-    model_cfg = dict(type='TOFlowVFINet')
+    model_cfg = dict(type="TOFlowVFINet")
 
     # build model
     model = build_backbone(model_cfg)
 
     # test attributes
-    assert model.__class__.__name__ == 'TOFlowVFINet'
+    assert model.__class__.__name__ == "TOFlowVFINet"
 
     # prepare data
     inputs = torch.rand(1, 2, 3, 256, 248)
@@ -37,14 +37,12 @@ def test_tof_vfi_net():
     assert torch.is_tensor(output)
 
     with pytest.raises(OSError):
-        model.init_weights('')
+        model.init_weights("")
     with pytest.raises(TypeError):
         model.init_weights(1)
     with pytest.raises(OSError):
-        model_cfg = dict(
-            type='TOFlowVFINet', flow_cfg=dict(norm_cfg=None, pretrained=''))
+        model_cfg = dict(type="TOFlowVFINet", flow_cfg=dict(norm_cfg=None, pretrained=""))
         model = build_backbone(model_cfg)
     with pytest.raises(TypeError):
-        model_cfg = dict(
-            type='TOFlowVFINet', flow_cfg=dict(norm_cfg=None, pretrained=1))
+        model_cfg = dict(type="TOFlowVFINet", flow_cfg=dict(norm_cfg=None, pretrained=1))
         model = build_backbone(model_cfg)

@@ -36,11 +36,11 @@ class MergeFgAndBg:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        alpha = results['alpha'][..., None].astype(np.float32) / 255.
-        fg = results['fg']
-        bg = results['bg']
-        merged = fg * alpha + (1. - alpha) * bg
-        results['merged'] = merged
+        alpha = results["alpha"][..., None].astype(np.float32) / 255.0
+        fg = results["fg"]
+        bg = results["bg"]
+        merged = fg * alpha + (1.0 - alpha) * bg
+        results["merged"] = merged
         return results
 
     def __repr__(self) -> str:
@@ -74,31 +74,26 @@ class GenerateTrimap:
         if isinstance(kernel_size, int):
             kernel_size = kernel_size, kernel_size + 1
         elif not mmcv.is_tuple_of(kernel_size, int) or len(kernel_size) != 2:
-            raise ValueError('kernel_size must be an int or a tuple of 2 int, '
-                             f'but got {kernel_size}')
+            raise ValueError("kernel_size must be an int or a tuple of 2 int, " f"but got {kernel_size}")
 
         if isinstance(iterations, int):
             iterations = iterations, iterations + 1
         elif not mmcv.is_tuple_of(iterations, int) or len(iterations) != 2:
-            raise ValueError('iterations must be an int or a tuple of 2 int, '
-                             f'but got {iterations}')
+            raise ValueError("iterations must be an int or a tuple of 2 int, " f"but got {iterations}")
 
         self.random = random
         if self.random:
             min_kernel, max_kernel = kernel_size
             self.iterations = iterations
             self.kernels = [
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size))
-                for size in range(min_kernel, max_kernel)
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size)) for size in range(min_kernel, max_kernel)
             ]
         else:
             erode_ksize, dilate_ksize = kernel_size
             self.iterations = iterations
             self.kernels = [
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                          (erode_ksize, erode_ksize)),
-                cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                          (dilate_ksize, dilate_ksize))
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erode_ksize, erode_ksize)),
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_ksize, dilate_ksize)),
             ]
 
     def __call__(self, results):
@@ -111,7 +106,7 @@ class GenerateTrimap:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        alpha = results['alpha']
+        alpha = results["alpha"]
 
         if self.random:
             kernel_num = len(self.kernels)
@@ -124,22 +119,19 @@ class GenerateTrimap:
             erode_kernel_idx, dilate_kernel_idx = 0, 1
             erode_iter, dilate_iter = self.iterations
 
-        eroded = cv2.erode(
-            alpha, self.kernels[erode_kernel_idx], iterations=erode_iter)
-        dilated = cv2.dilate(
-            alpha, self.kernels[dilate_kernel_idx], iterations=dilate_iter)
+        eroded = cv2.erode(alpha, self.kernels[erode_kernel_idx], iterations=erode_iter)
+        dilated = cv2.dilate(alpha, self.kernels[dilate_kernel_idx], iterations=dilate_iter)
 
         trimap = np.zeros_like(alpha)
         trimap.fill(128)
         trimap[eroded >= 255] = 255
         trimap[dilated <= 0] = 0
-        results['trimap'] = trimap.astype(np.float32)
+        results["trimap"] = trimap.astype(np.float32)
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(kernels={self.kernels}, iterations={self.iterations}, '
-                     f'random={self.random})')
+        repr_str += f"(kernels={self.kernels}, iterations={self.iterations}, " f"random={self.random})"
         return repr_str
 
 
@@ -159,8 +151,7 @@ class GenerateTrimapWithDistTransform:
 
     def __init__(self, dist_thr=20, random=True):
         if not (isinstance(dist_thr, int) and dist_thr >= 1):
-            raise ValueError('dist_thr must be an int that is greater than 1, '
-                             f'but got {dist_thr}')
+            raise ValueError("dist_thr must be an int that is greater than 1, " f"but got {dist_thr}")
         self.dist_thr = dist_thr
         self.random = random
 
@@ -174,24 +165,22 @@ class GenerateTrimapWithDistTransform:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        alpha = results['alpha']
+        alpha = results["alpha"]
 
         # image dilation implemented by Euclidean distance transform
         known = (alpha == 0) | (alpha == 255)
-        dist_to_unknown = cv2.distanceTransform(
-            known.astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
-        dist_thr = np.random.randint(
-            1, self.dist_thr) if self.random else self.dist_thr
+        dist_to_unknown = cv2.distanceTransform(known.astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
+        dist_thr = np.random.randint(1, self.dist_thr) if self.random else self.dist_thr
         unknown = dist_to_unknown <= dist_thr
 
         trimap = (alpha == 255) * 255
         trimap[unknown] = 128
-        results['trimap'] = trimap.astype(np.uint8)
+        results["trimap"] = trimap.astype(np.uint8)
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(dist_thr={self.dist_thr}, random={self.random})'
+        repr_str += f"(dist_thr={self.dist_thr}, random={self.random})"
         return repr_str
 
 
@@ -224,19 +213,12 @@ class CompositeFg:
             the randomly loaded images.
     """
 
-    def __init__(self,
-                 fg_dirs,
-                 alpha_dirs,
-                 interpolation='nearest',
-                 io_backend='disk',
-                 **kwargs):
+    def __init__(self, fg_dirs, alpha_dirs, interpolation="nearest", io_backend="disk", **kwargs):
         self.fg_dirs = fg_dirs if isinstance(fg_dirs, list) else [fg_dirs]
-        self.alpha_dirs = alpha_dirs if isinstance(alpha_dirs,
-                                                   list) else [alpha_dirs]
+        self.alpha_dirs = alpha_dirs if isinstance(alpha_dirs, list) else [alpha_dirs]
         self.interpolation = interpolation
 
-        self.fg_list, self.alpha_list = self._get_file_list(
-            self.fg_dirs, self.alpha_dirs)
+        self.fg_list, self.alpha_list = self._get_file_list(self.fg_dirs, self.alpha_dirs)
         self.io_backend = io_backend
         self.file_client = None
         self.kwargs = kwargs
@@ -253,9 +235,9 @@ class CompositeFg:
         """
         if self.file_client is None:
             self.file_client = FileClient(self.io_backend, **self.kwargs)
-        fg = results['fg']
-        alpha = results['alpha'].astype(np.float32) / 255.
-        h, w = results['fg'].shape[:2]
+        fg = results["fg"]
+        alpha = results["alpha"].astype(np.float32) / 255.0
+        h, w = results["fg"].shape[:2]
 
         # randomly select fg
         if np.random.rand() < 0.5:
@@ -263,25 +245,23 @@ class CompositeFg:
             fg2_bytes = self.file_client.get(self.fg_list[idx])
             fg2 = mmcv.imfrombytes(fg2_bytes)
             alpha2_bytes = self.file_client.get(self.alpha_list[idx])
-            alpha2 = mmcv.imfrombytes(alpha2_bytes, flag='grayscale')
-            alpha2 = alpha2.astype(np.float32) / 255.
+            alpha2 = mmcv.imfrombytes(alpha2_bytes, flag="grayscale")
+            alpha2 = alpha2.astype(np.float32) / 255.0
 
             fg2 = mmcv.imresize(fg2, (w, h), interpolation=self.interpolation)
-            alpha2 = mmcv.imresize(
-                alpha2, (w, h), interpolation=self.interpolation)
+            alpha2 = mmcv.imresize(alpha2, (w, h), interpolation=self.interpolation)
 
             # the overlap of two 50% transparency will be 75%
             alpha_tmp = 1 - (1 - alpha) * (1 - alpha2)
             # if the result alpha is all-one, then we avoid composition
             if np.any(alpha_tmp < 1):
                 # composite fg with fg2
-                fg = fg.astype(np.float32) * alpha[..., None] \
-                     + fg2.astype(np.float32) * (1 - alpha[..., None])
+                fg = fg.astype(np.float32) * alpha[..., None] + fg2.astype(np.float32) * (1 - alpha[..., None])
                 alpha = alpha_tmp
                 fg.astype(np.uint8)
 
-        results['fg'] = fg
-        results['alpha'] = (alpha * 255).astype(np.uint8)
+        results["fg"] = fg
+        results["alpha"] = (alpha * 255).astype(np.uint8)
         return results
 
     @staticmethod
@@ -293,8 +273,9 @@ class CompositeFg:
             alpha_list = sorted(mmcv.scandir(alpha_dir))
             # we assume the file names for fg and alpha are the same
             assert len(fg_list) == len(alpha_list), (
-                f'{fg_dir} and {alpha_dir} should have the same number of '
-                f'images ({len(fg_list)} differs from ({len(alpha_list)})')
+                f"{fg_dir} and {alpha_dir} should have the same number of "
+                f"images ({len(fg_list)} differs from ({len(alpha_list)})"
+            )
             fg_list = [osp.join(fg_dir, fg) for fg in fg_list]
             alpha_list = [osp.join(alpha_dir, alpha) for alpha in alpha_list]
 
@@ -304,8 +285,7 @@ class CompositeFg:
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(fg_dirs={self.fg_dirs}, alpha_dirs={self.alpha_dirs}, '
-                     f"interpolation='{self.interpolation}')")
+        repr_str += f"(fg_dirs={self.fg_dirs}, alpha_dirs={self.alpha_dirs}, " f"interpolation='{self.interpolation}')"
         return repr_str
 
 
@@ -331,13 +311,15 @@ class GenerateSeg:
             Defaults to [(21, 21), (31, 31), (41, 41)].
     """
 
-    def __init__(self,
-                 kernel_size=5,
-                 erode_iter_range=(10, 20),
-                 dilate_iter_range=(15, 30),
-                 num_holes_range=(0, 3),
-                 hole_sizes=[(15, 15), (25, 25), (35, 35), (45, 45)],
-                 blur_ksizes=[(21, 21), (31, 31), (41, 41)]):
+    def __init__(
+        self,
+        kernel_size=5,
+        erode_iter_range=(10, 20),
+        dilate_iter_range=(15, 30),
+        num_holes_range=(0, 3),
+        hole_sizes=[(15, 15), (25, 25), (35, 35), (45, 45)],
+        blur_ksizes=[(21, 21), (31, 31), (41, 41)],
+    ):
         self.kernel_size = kernel_size
         self.erode_iter_range = erode_iter_range
         self.dilate_iter_range = dilate_iter_range
@@ -362,8 +344,7 @@ class GenerateSeg:
         right = left + hole_size[1]
         height, weight = img.shape[:2]
         if top < 0 or bottom > height or left < 0 or right > weight:
-            raise ValueError(f'crop area {(left, top, right, bottom)} exceeds '
-                             f'image size {(height, weight)}')
+            raise ValueError(f"crop area {(left, top, right, bottom)} exceeds " f"image size {(height, weight)}")
         img[top:bottom, left:right] = 0
         return img
 
@@ -377,18 +358,14 @@ class GenerateSeg:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        alpha = results['alpha']
-        trimap = results['trimap']
+        alpha = results["alpha"]
+        trimap = results["trimap"]
 
         # generete segmentation mask
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                           (self.kernel_size,
-                                            self.kernel_size))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.kernel_size, self.kernel_size))
         seg = (alpha > 0.5).astype(np.float32)
-        seg = cv2.erode(
-            seg, kernel, iterations=np.random.randint(*self.erode_iter_range))
-        seg = cv2.dilate(
-            seg, kernel, iterations=np.random.randint(*self.dilate_iter_range))
+        seg = cv2.erode(seg, kernel, iterations=np.random.randint(*self.erode_iter_range))
+        seg = cv2.dilate(seg, kernel, iterations=np.random.randint(*self.dilate_iter_range))
 
         # generate some holes in segmentation mask
         num_holes = np.random.randint(*self.num_holes_range)
@@ -402,18 +379,19 @@ class GenerateSeg:
         # perform gaussian blur to segmentation mask
         seg = cv2.GaussianBlur(seg, random.choice(self.blur_ksizes), 0)
 
-        results['seg'] = seg.astype(np.uint8)
-        results['num_holes'] = num_holes
+        results["seg"] = seg.astype(np.uint8)
+        results["num_holes"] = num_holes
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
         repr_str += (
-            f'(kernel_size={self.kernel_size}, '
-            f'erode_iter_range={self.erode_iter_range}, '
-            f'dilate_iter_range={self.dilate_iter_range}, '
-            f'num_holes_range={self.num_holes_range}, '
-            f'hole_sizes={self.hole_sizes}, blur_ksizes={self.blur_ksizes}')
+            f"(kernel_size={self.kernel_size}, "
+            f"erode_iter_range={self.erode_iter_range}, "
+            f"dilate_iter_range={self.dilate_iter_range}, "
+            f"num_holes_range={self.num_holes_range}, "
+            f"hole_sizes={self.hole_sizes}, blur_ksizes={self.blur_ksizes}"
+        )
         return repr_str
 
 
@@ -430,8 +408,7 @@ class PerturbBg:
 
     def __init__(self, gamma_ratio=0.6):
         if gamma_ratio < 0 or gamma_ratio > 1:
-            raise ValueError('gamma_ratio must be a float between [0, 1], '
-                             f'but got {gamma_ratio}')
+            raise ValueError("gamma_ratio must be a float between [0, 1], " f"but got {gamma_ratio}")
         self.gamma_ratio = gamma_ratio
 
     def __call__(self, results):
@@ -448,15 +425,15 @@ class PerturbBg:
             # generate gaussian noise with random gaussian N([-7, 7), [2, 6))
             mu = np.random.randint(-7, 7)
             sigma = np.random.randint(2, 6)
-            results['noisy_bg'] = add_gaussian_noise(results['bg'], mu, sigma)
+            results["noisy_bg"] = add_gaussian_noise(results["bg"], mu, sigma)
         else:
             # adjust gamma in a range of N(1, 0.12)
             gamma = np.random.normal(1, 0.12)
-            results['noisy_bg'] = adjust_gamma(results['bg'], gamma)
+            results["noisy_bg"] = adjust_gamma(results["bg"], gamma)
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(gamma_ratio={self.gamma_ratio})'
+        return self.__class__.__name__ + f"(gamma_ratio={self.gamma_ratio})"
 
 
 @PIPELINES.register_module()
@@ -483,36 +460,30 @@ class GenerateSoftSeg:
             Defaults to [(21, 21), (31, 31), (41, 41)].
     """
 
-    def __init__(self,
-                 fg_thr=0.2,
-                 border_width=25,
-                 erode_ksize=3,
-                 dilate_ksize=5,
-                 erode_iter_range=(10, 20),
-                 dilate_iter_range=(3, 7),
-                 blur_ksizes=[(21, 21), (31, 31), (41, 41)]):
+    def __init__(
+        self,
+        fg_thr=0.2,
+        border_width=25,
+        erode_ksize=3,
+        dilate_ksize=5,
+        erode_iter_range=(10, 20),
+        dilate_iter_range=(3, 7),
+        blur_ksizes=[(21, 21), (31, 31), (41, 41)],
+    ):
         if not isinstance(fg_thr, float):
-            raise TypeError(f'fg_thr must be a float, but got {type(fg_thr)}')
+            raise TypeError(f"fg_thr must be a float, but got {type(fg_thr)}")
         if not isinstance(border_width, int):
-            raise TypeError(
-                f'border_width must be an int, but got {type(border_width)}')
+            raise TypeError(f"border_width must be an int, but got {type(border_width)}")
         if not isinstance(erode_ksize, int):
-            raise TypeError(
-                f'erode_ksize must be an int, but got {type(erode_ksize)}')
+            raise TypeError(f"erode_ksize must be an int, but got {type(erode_ksize)}")
         if not isinstance(dilate_ksize, int):
-            raise TypeError(
-                f'dilate_ksize must be an int, but got {type(dilate_ksize)}')
-        if (not mmcv.is_tuple_of(erode_iter_range, int)
-                or len(erode_iter_range) != 2):
-            raise TypeError('erode_iter_range must be a tuple of 2 int, '
-                            f'but got {erode_iter_range}')
-        if (not mmcv.is_tuple_of(dilate_iter_range, int)
-                or len(dilate_iter_range) != 2):
-            raise TypeError('dilate_iter_range must be a tuple of 2 int, '
-                            f'but got {dilate_iter_range}')
+            raise TypeError(f"dilate_ksize must be an int, but got {type(dilate_ksize)}")
+        if not mmcv.is_tuple_of(erode_iter_range, int) or len(erode_iter_range) != 2:
+            raise TypeError("erode_iter_range must be a tuple of 2 int, " f"but got {erode_iter_range}")
+        if not mmcv.is_tuple_of(dilate_iter_range, int) or len(dilate_iter_range) != 2:
+            raise TypeError("dilate_iter_range must be a tuple of 2 int, " f"but got {dilate_iter_range}")
         if not mmcv.is_list_of(blur_ksizes, tuple):
-            raise TypeError(
-                f'blur_ksizes must be a list of tuple, but got {blur_ksizes}')
+            raise TypeError(f"blur_ksizes must be a list of tuple, but got {blur_ksizes}")
 
         self.fg_thr = fg_thr
         self.border_width = border_width
@@ -532,29 +503,18 @@ class GenerateSoftSeg:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        seg = results['seg'].astype(np.float32) / 255
+        seg = results["seg"].astype(np.float32) / 255
         height, _ = seg.shape[:2]
         seg[seg > self.fg_thr] = 1
 
         # to align with the original repo, pad the bottom of the mask
-        seg = cv2.copyMakeBorder(seg, 0, self.border_width, 0, 0,
-                                 cv2.BORDER_REPLICATE)
+        seg = cv2.copyMakeBorder(seg, 0, self.border_width, 0, 0, cv2.BORDER_REPLICATE)
 
         # erode/dilate segmentation mask
-        erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                                 (self.erode_ksize,
-                                                  self.erode_ksize))
-        dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                                  (self.dilate_ksize,
-                                                   self.dilate_ksize))
-        seg = cv2.erode(
-            seg,
-            erode_kernel,
-            iterations=np.random.randint(*self.erode_iter_range))
-        seg = cv2.dilate(
-            seg,
-            dilate_kernel,
-            iterations=np.random.randint(*self.dilate_iter_range))
+        erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.erode_ksize, self.erode_ksize))
+        dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.dilate_ksize, self.dilate_ksize))
+        seg = cv2.erode(seg, erode_kernel, iterations=np.random.randint(*self.erode_iter_range))
+        seg = cv2.dilate(seg, dilate_kernel, iterations=np.random.randint(*self.dilate_iter_range))
 
         # perform gaussian blur to segmentation mask
         seg = cv2.GaussianBlur(seg, random.choice(self.blur_ksizes), 0)
@@ -563,18 +523,20 @@ class GenerateSoftSeg:
         seg = (seg * 255).astype(np.uint8)
         seg = np.delete(seg, range(height, height + self.border_width), 0)
 
-        results['soft_seg'] = seg
+        results["soft_seg"] = seg
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(fg_thr={self.fg_thr}, '
-                     f'border_width={self.border_width}, '
-                     f'erode_ksize={self.erode_ksize}, '
-                     f'dilate_ksize={self.dilate_ksize}, '
-                     f'erode_iter_range={self.erode_iter_range}, '
-                     f'dilate_iter_range={self.dilate_iter_range}, '
-                     f'blur_ksizes={self.blur_ksizes})')
+        repr_str += (
+            f"(fg_thr={self.fg_thr}, "
+            f"border_width={self.border_width}, "
+            f"erode_ksize={self.erode_ksize}, "
+            f"dilate_ksize={self.dilate_ksize}, "
+            f"erode_iter_range={self.erode_iter_range}, "
+            f"dilate_iter_range={self.dilate_iter_range}, "
+            f"blur_ksizes={self.blur_ksizes})"
+        )
         return repr_str
 
 
@@ -605,7 +567,7 @@ class TransformTrimap:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        trimap = results['trimap']
+        trimap = results["trimap"]
         assert len(trimap.shape) == 2
         h, w = trimap.shape[:2]
         # generate two-channel trimap
@@ -616,15 +578,13 @@ class TransformTrimap:
         factor = np.array([[[0.02, 0.08, 0.16]]], dtype=np.float32)
         for k in range(2):
             if np.any(trimap2[:, :, k]):
-                dt_mask = -cv2.distanceTransform(255 - trimap2[:, :, k],
-                                                 cv2.DIST_L2, 0)**2
+                dt_mask = -cv2.distanceTransform(255 - trimap2[:, :, k], cv2.DIST_L2, 0) ** 2
                 dt_mask = dt_mask[..., None]
                 L = 320
-                trimap_trans[..., 3 * k:3 * k +
-                             3] = np.exp(dt_mask / (2 * ((factor * L)**2)))
+                trimap_trans[..., 3 * k : 3 * k + 3] = np.exp(dt_mask / (2 * ((factor * L) ** 2)))
 
-        results['transformed_trimap'] = trimap_trans
-        results['two_channel_trimap'] = trimap2
+        results["transformed_trimap"] = trimap_trans
+        results["two_channel_trimap"] = trimap2
         return results
 
     def __repr__(self):

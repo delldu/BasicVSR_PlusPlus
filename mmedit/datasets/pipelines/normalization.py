@@ -40,27 +40,19 @@ class Normalize:
         for key in self.keys:
             if isinstance(results[key], list):
                 if self.save_original:
-                    results[key + '_unnormalised'] = [
-                        v.copy() for v in results[key]
-                    ]
-                results[key] = [
-                    mmcv.imnormalize(v, self.mean, self.std, self.to_rgb)
-                    for v in results[key]
-                ]
+                    results[key + "_unnormalised"] = [v.copy() for v in results[key]]
+                results[key] = [mmcv.imnormalize(v, self.mean, self.std, self.to_rgb) for v in results[key]]
             else:
                 if self.save_original:
-                    results[key + '_unnormalised'] = results[key].copy()
-                results[key] = mmcv.imnormalize(results[key], self.mean,
-                                                self.std, self.to_rgb)
+                    results[key + "_unnormalised"] = results[key].copy()
+                results[key] = mmcv.imnormalize(results[key], self.mean, self.std, self.to_rgb)
 
-        results['img_norm_cfg'] = dict(
-            mean=self.mean, std=self.std, to_rgb=self.to_rgb)
+        results["img_norm_cfg"] = dict(mean=self.mean, std=self.std, to_rgb=self.to_rgb)
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, mean={self.mean}, std={self.std}, '
-                     f'to_rgb={self.to_rgb})')
+        repr_str += f"(keys={self.keys}, mean={self.mean}, std={self.std}, " f"to_rgb={self.to_rgb})"
 
         return repr_str
 
@@ -92,12 +84,10 @@ class RescaleToZeroOne:
         """
         for key in self.keys:
             if isinstance(results[key], list):
-                results[key] = [
-                    v.astype(np.float32) / 255. for v in results[key]
-                ]
+                results[key] = [v.astype(np.float32) / 255.0 for v in results[key]]
             else:
-                results[key] = results[key].astype(np.float32) / 255.
+                results[key] = results[key].astype(np.float32) / 255.0
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(keys={self.keys})'
+        return self.__class__.__name__ + f"(keys={self.keys})"

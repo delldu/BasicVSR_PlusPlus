@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from ..registry import LOSSES
 from .utils import masked_loss
 
-_reduction_modes = ['none', 'mean', 'sum']
+_reduction_modes = ["none", "mean", "sum"]
 
 
 @masked_loss
@@ -20,7 +20,7 @@ def l1_loss(pred, target):
     Returns:
         Tensor: Calculated L1 loss.
     """
-    return F.l1_loss(pred, target, reduction='none')
+    return F.l1_loss(pred, target, reduction="none")
 
 
 @masked_loss
@@ -34,7 +34,7 @@ def mse_loss(pred, target):
     Returns:
         Tensor: Calculated MSE loss.
     """
-    return F.mse_loss(pred, target, reduction='none')
+    return F.mse_loss(pred, target, reduction="none")
 
 
 @masked_loss
@@ -48,7 +48,7 @@ def charbonnier_loss(pred, target, eps=1e-12):
     Returns:
         Tensor: Calculated Charbonnier loss.
     """
-    return torch.sqrt((pred - target)**2 + eps)
+    return torch.sqrt((pred - target) ** 2 + eps)
 
 
 @LOSSES.register_module()
@@ -66,11 +66,10 @@ class L1Loss(nn.Module):
             Default: False.
     """
 
-    def __init__(self, loss_weight=1.0, reduction='mean', sample_wise=False):
+    def __init__(self, loss_weight=1.0, reduction="mean", sample_wise=False):
         super().__init__()
-        if reduction not in ['none', 'mean', 'sum']:
-            raise ValueError(f'Unsupported reduction mode: {reduction}. '
-                             f'Supported ones are: {_reduction_modes}')
+        if reduction not in ["none", "mean", "sum"]:
+            raise ValueError(f"Unsupported reduction mode: {reduction}. " f"Supported ones are: {_reduction_modes}")
 
         self.loss_weight = loss_weight
         self.reduction = reduction
@@ -85,12 +84,7 @@ class L1Loss(nn.Module):
             weight (Tensor, optional): of shape (N, C, H, W). Element-wise
                 weights. Default: None.
         """
-        return self.loss_weight * l1_loss(
-            pred,
-            target,
-            weight,
-            reduction=self.reduction,
-            sample_wise=self.sample_wise)
+        return self.loss_weight * l1_loss(pred, target, weight, reduction=self.reduction, sample_wise=self.sample_wise)
 
 
 @LOSSES.register_module()
@@ -108,11 +102,10 @@ class MSELoss(nn.Module):
             Default: False.
     """
 
-    def __init__(self, loss_weight=1.0, reduction='mean', sample_wise=False):
+    def __init__(self, loss_weight=1.0, reduction="mean", sample_wise=False):
         super().__init__()
-        if reduction not in ['none', 'mean', 'sum']:
-            raise ValueError(f'Unsupported reduction mode: {reduction}. '
-                             f'Supported ones are: {_reduction_modes}')
+        if reduction not in ["none", "mean", "sum"]:
+            raise ValueError(f"Unsupported reduction mode: {reduction}. " f"Supported ones are: {_reduction_modes}")
 
         self.loss_weight = loss_weight
         self.reduction = reduction
@@ -127,12 +120,7 @@ class MSELoss(nn.Module):
             weight (Tensor, optional): of shape (N, C, H, W). Element-wise
                 weights. Default: None.
         """
-        return self.loss_weight * mse_loss(
-            pred,
-            target,
-            weight,
-            reduction=self.reduction,
-            sample_wise=self.sample_wise)
+        return self.loss_weight * mse_loss(pred, target, weight, reduction=self.reduction, sample_wise=self.sample_wise)
 
 
 @LOSSES.register_module()
@@ -156,15 +144,10 @@ class CharbonnierLoss(nn.Module):
             Default: 1e-12.
     """
 
-    def __init__(self,
-                 loss_weight=1.0,
-                 reduction='mean',
-                 sample_wise=False,
-                 eps=1e-12):
+    def __init__(self, loss_weight=1.0, reduction="mean", sample_wise=False, eps=1e-12):
         super().__init__()
-        if reduction not in ['none', 'mean', 'sum']:
-            raise ValueError(f'Unsupported reduction mode: {reduction}. '
-                             f'Supported ones are: {_reduction_modes}')
+        if reduction not in ["none", "mean", "sum"]:
+            raise ValueError(f"Unsupported reduction mode: {reduction}. " f"Supported ones are: {_reduction_modes}")
 
         self.loss_weight = loss_weight
         self.reduction = reduction
@@ -181,20 +164,16 @@ class CharbonnierLoss(nn.Module):
                 weights. Default: None.
         """
         return self.loss_weight * charbonnier_loss(
-            pred,
-            target,
-            weight,
-            eps=self.eps,
-            reduction=self.reduction,
-            sample_wise=self.sample_wise)
+            pred, target, weight, eps=self.eps, reduction=self.reduction, sample_wise=self.sample_wise
+        )
 
 
 @LOSSES.register_module()
 class MaskedTVLoss(L1Loss):
     """Masked TV loss.
 
-        Args:
-            loss_weight (float, optional): Loss weight. Defaults to 1.0.
+    Args:
+        loss_weight (float, optional): Loss weight. Defaults to 1.0.
     """
 
     def __init__(self, loss_weight=1.0):
@@ -211,10 +190,8 @@ class MaskedTVLoss(L1Loss):
         Returns:
             [type]: [description]
         """
-        y_diff = super().forward(
-            pred[:, :, :-1, :], pred[:, :, 1:, :], weight=mask[:, :, :-1, :])
-        x_diff = super().forward(
-            pred[:, :, :, :-1], pred[:, :, :, 1:], weight=mask[:, :, :, :-1])
+        y_diff = super().forward(pred[:, :, :-1, :], pred[:, :, 1:, :], weight=mask[:, :, :-1, :])
+        x_diff = super().forward(pred[:, :, :, :-1], pred[:, :, :, 1:], weight=mask[:, :, :, :-1])
 
         loss = x_diff + y_diff
 

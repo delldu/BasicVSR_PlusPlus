@@ -6,12 +6,12 @@ from mmcv.cnn import constant_init
 from mmcv.ops import ModulatedDeformConv2d, modulated_deform_conv2d
 from mmcv.runner import load_checkpoint
 
-from mmedit.models.backbones.sr_backbones.basicvsr_net import (
-    ResidualBlocksWithInputConv, SPyNet)
+from mmedit.models.backbones.sr_backbones.basicvsr_net import ResidualBlocksWithInputConv, SPyNet
 from mmedit.models.common import PixelShufflePack, flow_warp
 from mmedit.models.registry import BACKBONES
 from mmedit.utils import get_root_logger
 import pdb
+
 
 @BACKBONES.register_module()
 class BasicVSRPlusPlus(nn.Module):
@@ -42,13 +42,15 @@ class BasicVSRPlusPlus(nn.Module):
             Default: 100.
     """
 
-    def __init__(self,
-                 mid_channels=64,
-                 num_blocks=7,
-                 max_residue_magnitude=10,
-                 is_low_res_input=True,
-                 spynet_pretrained=None,
-                 cpu_cache_length=100):
+    def __init__(
+        self,
+        mid_channels=64,
+        num_blocks=7,
+        max_residue_magnitude=10,
+        is_low_res_input=True,
+        spynet_pretrained=None,
+        cpu_cache_length=100,
+    ):
 
         super().__init__()
         # zoom: # xxxx8888
@@ -71,7 +73,7 @@ class BasicVSRPlusPlus(nn.Module):
         self.spynet = SPyNet(pretrained=spynet_pretrained)
 
         # feature extraction module
-        if is_low_res_input: # zoom: True,
+        if is_low_res_input:  # zoom: True,
             self.feat_extract = ResidualBlocksWithInputConv(3, mid_channels, 5)
         else:
             self.feat_extract = nn.Sequential(
@@ -79,12 +81,13 @@ class BasicVSRPlusPlus(nn.Module):
                 nn.LeakyReLU(negative_slope=0.1, inplace=True),
                 nn.Conv2d(mid_channels, mid_channels, 3, 2, 1),
                 nn.LeakyReLU(negative_slope=0.1, inplace=True),
-                ResidualBlocksWithInputConv(mid_channels, mid_channels, 5))
+                ResidualBlocksWithInputConv(mid_channels, mid_channels, 5),
+            )
 
         # propagation branches
         self.deform_align = nn.ModuleDict()
         self.backbone = nn.ModuleDict()
-        modules = ['backward_1', 'forward_1', 'backward_2', 'forward_2']
+        modules = ["backward_1", "forward_1", "backward_2", "forward_2"]
         for i, module in enumerate(modules):
             self.deform_align[module] = SecondOrderDeformableAlignment(
                 2 * mid_channels,
@@ -92,21 +95,17 @@ class BasicVSRPlusPlus(nn.Module):
                 3,
                 padding=1,
                 deform_groups=16,
-                max_residue_magnitude=max_residue_magnitude)
-            self.backbone[module] = ResidualBlocksWithInputConv(
-                (2 + i) * mid_channels, mid_channels, num_blocks)
+                max_residue_magnitude=max_residue_magnitude,
+            )
+            self.backbone[module] = ResidualBlocksWithInputConv((2 + i) * mid_channels, mid_channels, num_blocks)
 
         # upsampling module
-        self.reconstruction = ResidualBlocksWithInputConv(
-            5 * mid_channels, mid_channels, 5)
-        self.upsample1 = PixelShufflePack(
-            mid_channels, mid_channels, 2, upsample_kernel=3)
-        self.upsample2 = PixelShufflePack(
-            mid_channels, 64, 2, upsample_kernel=3)
+        self.reconstruction = ResidualBlocksWithInputConv(5 * mid_channels, mid_channels, 5)
+        self.upsample1 = PixelShufflePack(mid_channels, mid_channels, 2, upsample_kernel=3)
+        self.upsample2 = PixelShufflePack(mid_channels, 64, 2, upsample_kernel=3)
         self.conv_hr = nn.Conv2d(64, 64, 3, 1, 1)
         self.conv_last = nn.Conv2d(64, 3, 3, 1, 1)
-        self.img_upsample = nn.Upsample(
-            scale_factor=4, mode='bilinear', align_corners=False)
+        self.img_upsample = nn.Upsample(scale_factor=4, mode="bilinear", align_corners=False)
 
         # activation function
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
@@ -125,7 +124,7 @@ class BasicVSRPlusPlus(nn.Module):
                 shape (n, t, c, h, w).
         """
 
-        if lqs.size(1) % 2 == 0: # Zoom: False
+        if lqs.size(1) % 2 == 0:  # Zoom: False
             lqs_1, lqs_2 = torch.chunk(lqs, 2, dim=1)
             if torch.norm(lqs_1 - lqs_2.flip(1)) == 0:
                 self.is_mirror_extended = True
@@ -181,20 +180,20 @@ class BasicVSRPlusPlus(nn.Module):
                 propagation branch, which is represented by a list of tensors.
         """
         # feats.keys() -- ['spatial', 'backward_1']
-        n, t, _, h, w = flows.size() # [1, 20, 2, 180, 320]
+        n, t, _, h, w = flows.size()  # [1, 20, 2, 180, 320]
 
         frame_idx = range(0, t + 1)
         flow_idx = range(-1, t)
-        mapping_idx = list(range(0, len(feats['spatial'])))
+        mapping_idx = list(range(0, len(feats["spatial"])))
         mapping_idx += mapping_idx[::-1]
 
-        if 'backward' in module_name:
+        if "backward" in module_name:
             frame_idx = frame_idx[::-1]
             flow_idx = frame_idx
 
         feat_prop = flows.new_zeros(n, self.mid_channels, h, w)
         for i, idx in enumerate(frame_idx):
-            feat_current = feats['spatial'][mapping_idx[idx]]
+            feat_current = feats["spatial"][mapping_idx[idx]]
             if self.cpu_cache:
                 feat_current = feat_current.cuda()
                 feat_prop = feat_prop.cuda()
@@ -220,21 +219,16 @@ class BasicVSRPlusPlus(nn.Module):
                     if self.cpu_cache:
                         flow_n2 = flow_n2.cuda()
 
-                    flow_n2 = flow_n1 + flow_warp(flow_n2,
-                                                  flow_n1.permute(0, 2, 3, 1))
+                    flow_n2 = flow_n1 + flow_warp(flow_n2, flow_n1.permute(0, 2, 3, 1))
                     cond_n2 = flow_warp(feat_n2, flow_n2.permute(0, 2, 3, 1))
 
                 # flow-guided deformable convolution
                 cond = torch.cat([cond_n1, feat_current, cond_n2], dim=1)
                 feat_prop = torch.cat([feat_prop, feat_n2], dim=1)
-                feat_prop = self.deform_align[module_name](feat_prop, cond,
-                                                           flow_n1, flow_n2)
+                feat_prop = self.deform_align[module_name](feat_prop, cond, flow_n1, flow_n2)
 
             # concatenate and residual blocks
-            feat = [feat_current] + [
-                feats[k][idx]
-                for k in feats if k not in ['spatial', module_name]
-            ] + [feat_prop]
+            feat = [feat_current] + [feats[k][idx] for k in feats if k not in ["spatial", module_name]] + [feat_prop]
             if self.cpu_cache:
                 feat = [f.cuda() for f in feat]
 
@@ -246,7 +240,7 @@ class BasicVSRPlusPlus(nn.Module):
                 feats[module_name][-1] = feats[module_name][-1].cpu()
                 torch.cuda.empty_cache()
 
-        if 'backward' in module_name:
+        if "backward" in module_name:
             feats[module_name] = feats[module_name][::-1]
 
         # feats.keys() -- ['spatial', 'backward_1']
@@ -265,14 +259,14 @@ class BasicVSRPlusPlus(nn.Module):
 
         """
         outputs = []
-        num_outputs = len(feats['spatial'])
+        num_outputs = len(feats["spatial"])
 
         mapping_idx = list(range(0, num_outputs))
         mapping_idx += mapping_idx[::-1]
 
         for i in range(0, lqs.size(1)):
-            hr = [feats[k].pop(0) for k in feats if k != 'spatial']
-            hr.insert(0, feats['spatial'][mapping_idx[i]])
+            hr = [feats[k].pop(0) for k in feats if k != "spatial"]
+            hr.insert(0, feats["spatial"][mapping_idx[i]])
             hr = torch.cat(hr, dim=1)
             if self.cpu_cache:
                 hr = hr.cuda()
@@ -282,7 +276,7 @@ class BasicVSRPlusPlus(nn.Module):
             hr = self.lrelu(self.upsample2(hr))
             hr = self.lrelu(self.conv_hr(hr))
             hr = self.conv_last(hr)
-            if self.is_low_res_input: # Zoom: True
+            if self.is_low_res_input:  # Zoom: True
                 hr += self.img_upsample(lqs[:, i, :, :, :])
             else:
                 hr += lqs[:, i, :, :, :]
@@ -305,7 +299,7 @@ class BasicVSRPlusPlus(nn.Module):
         Returns:
             Tensor: Output HR sequence with shape (n, t, c, 4h, 4w).
         """
-        n, t, c, h, w = lqs.size() # [1, 21, 3, 180, 320]
+        n, t, c, h, w = lqs.size()  # [1, 21, 3, 180, 320]
 
         # whether to cache the features in CPU (no effect if using CPU)
         if t > self.cpu_cache_length and lqs.is_cuda:
@@ -313,12 +307,12 @@ class BasicVSRPlusPlus(nn.Module):
         else:
             self.cpu_cache = False
 
-        if self.is_low_res_input: # Zoom: True
+        if self.is_low_res_input:  # Zoom: True
             lqs_downsample = lqs.clone()
         else:
-            lqs_downsample = F.interpolate(
-                lqs.view(-1, c, h, w), scale_factor=0.25,
-                mode='bicubic').view(n, t, c, h // 4, w // 4)
+            lqs_downsample = F.interpolate(lqs.view(-1, c, h, w), scale_factor=0.25, mode="bicubic").view(
+                n, t, c, h // 4, w // 4
+            )
 
         # check whether the input is an extended sequence
         self.check_if_mirror_extended(lqs)
@@ -326,21 +320,21 @@ class BasicVSRPlusPlus(nn.Module):
         feats = {}
         # compute spatial features
         if self.cpu_cache:
-            feats['spatial'] = []
+            feats["spatial"] = []
             for i in range(0, t):
                 feat = self.feat_extract(lqs[:, i, :, :, :]).cpu()
-                feats['spatial'].append(feat)
+                feats["spatial"].append(feat)
                 torch.cuda.empty_cache()
         else:
             feats_ = self.feat_extract(lqs.view(-1, c, h, w))
             h, w = feats_.shape[2:]
             feats_ = feats_.view(n, t, -1, h, w)
-            feats['spatial'] = [feats_[:, i, :, :, :] for i in range(0, t)]
+            feats["spatial"] = [feats_[:, i, :, :, :] for i in range(0, t)]
 
         # compute optical flow using the low-res inputs
         assert lqs_downsample.size(3) >= 64 and lqs_downsample.size(4) >= 64, (
-            'The height and width of low-res inputs must be at least 64, '
-            f'but got {h} and {w}.')
+            "The height and width of low-res inputs must be at least 64, " f"but got {h} and {w}."
+        )
         flows_forward, flows_backward = self.compute_flow(lqs_downsample)
         # len(flows_forward), flows_forward[0].size()
         # (1, [20, 2, 180, 320])
@@ -349,12 +343,12 @@ class BasicVSRPlusPlus(nn.Module):
 
         # feature propgation
         for iter_ in [1, 2]:
-            for direction in ['backward', 'forward']:
-                module = f'{direction}_{iter_}'
+            for direction in ["backward", "forward"]:
+                module = f"{direction}_{iter_}"
 
                 feats[module] = []
 
-                if direction == 'backward':
+                if direction == "backward":
                     flows = flows_backward
                 elif flows_forward is not None:
                     flows = flows_forward
@@ -381,8 +375,7 @@ class BasicVSRPlusPlus(nn.Module):
             logger = get_root_logger()
             load_checkpoint(self, pretrained, strict=strict, logger=logger)
         elif pretrained is not None:
-            raise TypeError(f'"pretrained" must be a str or None. '
-                            f'But received {type(pretrained)}.')
+            raise TypeError(f'"pretrained" must be a str or None. ' f"But received {type(pretrained)}.")
 
 
 class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
@@ -405,13 +398,12 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
     """
 
     def __init__(self, *args, **kwargs):
-        self.max_residue_magnitude = kwargs.pop('max_residue_magnitude', 10)
+        self.max_residue_magnitude = kwargs.pop("max_residue_magnitude", 10)
 
         super(SecondOrderDeformableAlignment, self).__init__(*args, **kwargs)
         # zoom, xxxx8888
         # args = (128, 64, 3)
         # kwargs = {'padding': 1, 'deform_groups': 16}
-
 
         self.conv_offset = nn.Sequential(
             nn.Conv2d(3 * self.out_channels + 4, self.out_channels, 3, 1, 1),
@@ -445,21 +437,24 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
         o1, o2, mask = torch.chunk(out, 3, dim=1)
 
         # offset
-        offset = self.max_residue_magnitude * torch.tanh(
-            torch.cat((o1, o2), dim=1))
+        offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))
         offset_1, offset_2 = torch.chunk(offset, 2, dim=1)
-        offset_1 = offset_1 + flow_1.flip(1).repeat(1,
-                                                    offset_1.size(1) // 2, 1,
-                                                    1)
-        offset_2 = offset_2 + flow_2.flip(1).repeat(1,
-                                                    offset_2.size(1) // 2, 1,
-                                                    1)
-        offset = torch.cat([offset_1, offset_2], dim=1) # [1, 288, 180, 320]
+        offset_1 = offset_1 + flow_1.flip(1).repeat(1, offset_1.size(1) // 2, 1, 1)
+        offset_2 = offset_2 + flow_2.flip(1).repeat(1, offset_2.size(1) // 2, 1, 1)
+        offset = torch.cat([offset_1, offset_2], dim=1)  # [1, 288, 180, 320]
 
         # mask
-        mask = torch.sigmoid(mask) # [1, 144, 180, 320]
+        mask = torch.sigmoid(mask)  # [1, 144, 180, 320]
 
-        return modulated_deform_conv2d(x, offset, mask, self.weight, self.bias,
-                                       self.stride, self.padding,
-                                       self.dilation, self.groups,
-                                       self.deform_groups)
+        return modulated_deform_conv2d(
+            x,
+            offset,
+            mask,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.deform_groups,
+        )

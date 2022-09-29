@@ -8,11 +8,11 @@ from mmedit.models.components.discriminators.light_cnn import MaxFeature
 
 def test_max_feature():
     # cpu
-    conv2d = MaxFeature(16, 16, filter_type='conv2d')
+    conv2d = MaxFeature(16, 16, filter_type="conv2d")
     x1 = torch.rand(3, 16, 16, 16)
     y1 = conv2d(x1)
     assert y1.shape == (3, 16, 16, 16)
-    linear = MaxFeature(16, 16, filter_type='linear')
+    linear = MaxFeature(16, 16, filter_type="linear")
     x2 = torch.rand(3, 16)
     y2 = linear(x2)
     assert y2.shape == (3, 16)
@@ -28,11 +28,11 @@ def test_max_feature():
         assert y2.shape == (3, 16)
     # filter_type should be conv2d or linear
     with pytest.raises(ValueError):
-        MaxFeature(12, 12, filter_type='conv1d')
+        MaxFeature(12, 12, filter_type="conv1d")
 
 
 def test_light_cnn():
-    cfg = dict(type='LightCNN', in_channels=3)
+    cfg = dict(type="LightCNN", in_channels=3)
     net = build_component(cfg)
     net.init_weights(pretrained=None)
     # cpu

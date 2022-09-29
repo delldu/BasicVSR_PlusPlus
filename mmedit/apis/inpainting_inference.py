@@ -19,21 +19,13 @@ def inpainting_inference(model, masked_img, mask):
     device = next(model.parameters()).device  # model device
 
     infer_pipeline = [
-        dict(type='LoadImageFromFile', key='masked_img'),
-        dict(type='LoadMask', mask_mode='file', mask_config=dict()),
-        dict(type='Pad', keys=['masked_img', 'mask'], mode='reflect'),
-        dict(
-            type='Normalize',
-            keys=['masked_img'],
-            mean=[127.5] * 3,
-            std=[127.5] * 3,
-            to_rgb=False),
-        dict(type='GetMaskedImage', img_name='masked_img'),
-        dict(
-            type='Collect',
-            keys=['masked_img', 'mask'],
-            meta_keys=['masked_img_path']),
-        dict(type='ImageToTensor', keys=['masked_img', 'mask'])
+        dict(type="LoadImageFromFile", key="masked_img"),
+        dict(type="LoadMask", mask_mode="file", mask_config=dict()),
+        dict(type="Pad", keys=["masked_img", "mask"], mode="reflect"),
+        dict(type="Normalize", keys=["masked_img"], mean=[127.5] * 3, std=[127.5] * 3, to_rgb=False),
+        dict(type="GetMaskedImage", img_name="masked_img"),
+        dict(type="Collect", keys=["masked_img", "mask"], meta_keys=["masked_img_path"]),
+        dict(type="ImageToTensor", keys=["masked_img", "mask"]),
     ]
 
     # build the data pipeline
@@ -46,4 +38,4 @@ def inpainting_inference(model, masked_img, mask):
     with torch.no_grad():
         result = model(test_mode=True, **data)
 
-    return result['fake_img']
+    return result["fake_img"]

@@ -7,28 +7,20 @@ from mmedit.models import build_backbone
 def test_liif_edsr():
 
     model_cfg = dict(
-        type='LIIFEDSR',
-        encoder=dict(
-            type='EDSR',
-            in_channels=3,
-            out_channels=3,
-            mid_channels=64,
-            num_blocks=16),
-        imnet=dict(
-            type='MLPRefiner',
-            in_dim=64,
-            out_dim=3,
-            hidden_list=[256, 256, 256, 256]),
+        type="LIIFEDSR",
+        encoder=dict(type="EDSR", in_channels=3, out_channels=3, mid_channels=64, num_blocks=16),
+        imnet=dict(type="MLPRefiner", in_dim=64, out_dim=3, hidden_list=[256, 256, 256, 256]),
         local_ensemble=True,
         feat_unfold=True,
         cell_decode=True,
-        eval_bsize=30000)
+        eval_bsize=30000,
+    )
 
     # build model
     model = build_backbone(model_cfg)
 
     # test attributes
-    assert model.__class__.__name__ == 'LIIFEDSR'
+    assert model.__class__.__name__ == "LIIFEDSR"
 
     # prepare data
     inputs = torch.rand(1, 3, 22, 11)
@@ -58,31 +50,29 @@ def test_liif_edsr():
 def test_liif_rdn():
 
     model_cfg = dict(
-        type='LIIFRDN',
+        type="LIIFRDN",
         encoder=dict(
-            type='RDN',
+            type="RDN",
             in_channels=3,
             out_channels=3,
             mid_channels=64,
             num_blocks=16,
             upscale_factor=4,
             num_layers=8,
-            channel_growth=64),
-        imnet=dict(
-            type='MLPRefiner',
-            in_dim=64,
-            out_dim=3,
-            hidden_list=[256, 256, 256, 256]),
+            channel_growth=64,
+        ),
+        imnet=dict(type="MLPRefiner", in_dim=64, out_dim=3, hidden_list=[256, 256, 256, 256]),
         local_ensemble=True,
         feat_unfold=True,
         cell_decode=True,
-        eval_bsize=30000)
+        eval_bsize=30000,
+    )
 
     # build model
     model = build_backbone(model_cfg)
 
     # test attributes
-    assert model.__class__.__name__ == 'LIIFRDN'
+    assert model.__class__.__name__ == "LIIFRDN"
 
     # prepare data
     inputs = torch.rand(1, 3, 22, 11)

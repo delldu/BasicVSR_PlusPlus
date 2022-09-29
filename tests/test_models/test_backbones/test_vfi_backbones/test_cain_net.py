@@ -7,13 +7,13 @@ from mmedit.models import build_backbone
 
 def test_cain_net():
 
-    model_cfg = dict(type='CAINNet')
+    model_cfg = dict(type="CAINNet")
 
     # build model
     model = build_backbone(model_cfg)
 
     # test attributes
-    assert model.__class__.__name__ == 'CAINNet'
+    assert model.__class__.__name__ == "CAINNet"
 
     # prepare data
     inputs0 = torch.rand(1, 2, 3, 5, 5)
@@ -30,18 +30,18 @@ def test_cain_net():
     with pytest.raises(AssertionError):
         output = model(inputs[:, :1])
     with pytest.raises(OSError):
-        model.init_weights('')
+        model.init_weights("")
     with pytest.raises(TypeError):
         model.init_weights(1)
 
-    model_cfg = dict(type='CAINNet', norm='in')
+    model_cfg = dict(type="CAINNet", norm="in")
     model = build_backbone(model_cfg)
     model(inputs)
-    model_cfg = dict(type='CAINNet', norm='bn')
+    model_cfg = dict(type="CAINNet", norm="bn")
     model = build_backbone(model_cfg)
     model(inputs)
     with pytest.raises(ValueError):
-        model_cfg = dict(type='CAINNet', norm='lys')
+        model_cfg = dict(type="CAINNet", norm="lys")
         build_backbone(model_cfg)
 
     # test on gpu
@@ -57,12 +57,12 @@ def test_cain_net():
         target0 = target0.cuda()
         model(inputs0, padding_flag=True)
 
-        model_cfg = dict(type='CAINNet', norm='in')
+        model_cfg = dict(type="CAINNet", norm="in")
         model = build_backbone(model_cfg).cuda()
         model(inputs)
-        model_cfg = dict(type='CAINNet', norm='bn')
+        model_cfg = dict(type="CAINNet", norm="bn")
         model = build_backbone(model_cfg).cuda()
         model(inputs)
         with pytest.raises(ValueError):
-            model_cfg = dict(type='CAINNet', norm='lys')
+            model_cfg = dict(type="CAINNet", norm="lys")
             build_backbone(model_cfg).cuda()

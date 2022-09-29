@@ -12,7 +12,7 @@ def assert_dict_keys_equal(dictionary, target_keys):
 
 
 def assert_tensor_with_shape(tensor, shape):
-    """"Check if the shape of the tensor is equal to the target shape."""
+    """ "Check if the shape of the tensor is equal to the target shape."""
     assert isinstance(tensor, torch.Tensor)
     assert tensor.shape == shape
 
@@ -33,8 +33,7 @@ def test_plain_refiner():
         model.train()
         model.cuda()
         merged, alpha, trimap, raw_alpha = _demo_inputs_pair(cuda=True)
-        prediction = model(
-            torch.cat([merged, raw_alpha.sigmoid()], 1), raw_alpha)
+        prediction = model(torch.cat([merged, raw_alpha.sigmoid()], 1), raw_alpha)
         assert_tensor_with_shape(prediction, torch.Size([1, 1, 64, 64]))
 
 
@@ -52,8 +51,7 @@ def _demo_inputs_pair(img_shape=(64, 64), batch_size=1, cuda=False):
     merged = torch.from_numpy(np.random.random(color_shape).astype(np.float32))
     alpha = torch.from_numpy(np.random.random(gray_shape).astype(np.float32))
     trimap = torch.from_numpy(np.random.random(gray_shape).astype(np.float32))
-    raw_alpha = torch.from_numpy(
-        np.random.random(gray_shape).astype(np.float32))
+    raw_alpha = torch.from_numpy(np.random.random(gray_shape).astype(np.float32))
     if cuda:
         merged = merged.cuda()
         alpha = alpha.cuda()

@@ -2,9 +2,7 @@
 import pytest
 import torch
 
-from mmedit.models.backbones.sr_backbones.edvr_net import (EDVRNet,
-                                                           PCDAlignment,
-                                                           TSAFusion)
+from mmedit.models.backbones.sr_backbones.edvr_net import EDVRNet, PCDAlignment, TSAFusion
 
 
 def test_pcd_alignment():
@@ -14,7 +12,7 @@ def test_pcd_alignment():
     pcd_alignment = PCDAlignment(mid_channels=4, deform_groups=2)
     input_list = []
     for i in range(3, 0, -1):
-        input_list.append(torch.rand(1, 4, 2**i, 2**i))
+        input_list.append(torch.rand(1, 4, 2 ** i, 2 ** i))
 
     pcd_alignment = pcd_alignment
     input_list = [v for v in input_list]
@@ -29,7 +27,7 @@ def test_pcd_alignment():
         pcd_alignment = PCDAlignment(mid_channels=4, deform_groups=2)
         input_list = []
         for i in range(3, 0, -1):
-            input_list.append(torch.rand(1, 4, 2**i, 2**i))
+            input_list.append(torch.rand(1, 4, 2 ** i, 2 ** i))
 
         pcd_alignment = pcd_alignment.cuda()
         input_list = [v.cuda() for v in input_list]
@@ -73,7 +71,8 @@ def test_edvrnet():
         num_blocks_extraction=1,
         num_blocks_reconstruction=1,
         center_frame_idx=2,
-        with_tsa=True)
+        with_tsa=True,
+    )
     input_tensor = torch.rand(1, 5, 3, 8, 8)
     edvrnet.init_weights(pretrained=None)
     output = edvrnet(input_tensor)
@@ -89,7 +88,8 @@ def test_edvrnet():
         num_blocks_extraction=1,
         num_blocks_reconstruction=1,
         center_frame_idx=2,
-        with_tsa=False)
+        with_tsa=False,
+    )
 
     output = edvrnet(input_tensor)
     assert output.shape == (1, 3, 32, 32)
@@ -115,7 +115,8 @@ def test_edvrnet():
             num_blocks_extraction=1,
             num_blocks_reconstruction=1,
             center_frame_idx=2,
-            with_tsa=True).cuda()
+            with_tsa=True,
+        ).cuda()
         input_tensor = torch.rand(1, 5, 3, 8, 8).cuda()
         edvrnet.init_weights(pretrained=None)
         output = edvrnet(input_tensor)
@@ -131,7 +132,8 @@ def test_edvrnet():
             num_blocks_extraction=1,
             num_blocks_reconstruction=1,
             center_frame_idx=2,
-            with_tsa=False).cuda()
+            with_tsa=False,
+        ).cuda()
 
         output = edvrnet(input_tensor)
         assert output.shape == (1, 3, 32, 32)

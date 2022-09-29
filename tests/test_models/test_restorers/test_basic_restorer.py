@@ -13,15 +13,10 @@ from mmedit.models.losses import L1Loss
 
 def test_basic_restorer():
     model_cfg = dict(
-        type='BasicRestorer',
-        generator=dict(
-            type='MSRResNet',
-            in_channels=3,
-            out_channels=3,
-            mid_channels=4,
-            num_blocks=1,
-            upscale_factor=4),
-        pixel_loss=dict(type='L1Loss', loss_weight=1.0, reduction='mean'))
+        type="BasicRestorer",
+        generator=dict(type="MSRResNet", in_channels=3, out_channels=3, mid_channels=4, num_blocks=1, upscale_factor=4),
+        pixel_loss=dict(type="L1Loss", loss_weight=1.0, reduction="mean"),
+    )
 
     train_cfg = None
     test_cfg = None
@@ -30,106 +25,94 @@ def test_basic_restorer():
     restorer = build_model(model_cfg, train_cfg=train_cfg, test_cfg=test_cfg)
 
     # test attributes
-    assert restorer.__class__.__name__ == 'BasicRestorer'
+    assert restorer.__class__.__name__ == "BasicRestorer"
     assert isinstance(restorer.generator, MSRResNet)
     assert isinstance(restorer.pixel_loss, L1Loss)
 
     # prepare data
     inputs = torch.rand(1, 3, 20, 20)
     targets = torch.rand(1, 3, 80, 80)
-    data_batch = {'lq': inputs, 'gt': targets}
+    data_batch = {"lq": inputs, "gt": targets}
 
     # prepare optimizer
-    optim_cfg = dict(type='Adam', lr=2e-4, betas=(0.9, 0.999))
-    optimizer = {
-        'generator':
-        obj_from_dict(optim_cfg, torch.optim,
-                      dict(params=restorer.parameters()))
-    }
+    optim_cfg = dict(type="Adam", lr=2e-4, betas=(0.9, 0.999))
+    optimizer = {"generator": obj_from_dict(optim_cfg, torch.optim, dict(params=restorer.parameters()))}
 
     # test forward train
     outputs = restorer(**data_batch, test_mode=False)
     assert isinstance(outputs, dict)
-    assert isinstance(outputs['losses'], dict)
-    assert isinstance(outputs['losses']['loss_pix'], torch.FloatTensor)
-    assert outputs['num_samples'] == 1
-    assert torch.equal(outputs['results']['lq'], data_batch['lq'])
-    assert torch.equal(outputs['results']['gt'], data_batch['gt'])
-    assert torch.is_tensor(outputs['results']['output'])
-    assert outputs['results']['output'].size() == (1, 3, 80, 80)
+    assert isinstance(outputs["losses"], dict)
+    assert isinstance(outputs["losses"]["loss_pix"], torch.FloatTensor)
+    assert outputs["num_samples"] == 1
+    assert torch.equal(outputs["results"]["lq"], data_batch["lq"])
+    assert torch.equal(outputs["results"]["gt"], data_batch["gt"])
+    assert torch.is_tensor(outputs["results"]["output"])
+    assert outputs["results"]["output"].size() == (1, 3, 80, 80)
 
     # test forward_test
     with torch.no_grad():
         outputs = restorer(**data_batch, test_mode=True)
-    assert torch.equal(outputs['lq'], data_batch['lq'])
-    assert torch.is_tensor(outputs['output'])
-    assert outputs['output'].size() == (1, 3, 80, 80)
+    assert torch.equal(outputs["lq"], data_batch["lq"])
+    assert torch.is_tensor(outputs["output"])
+    assert outputs["output"].size() == (1, 3, 80, 80)
 
     # test forward_dummy
     with torch.no_grad():
-        output = restorer.forward_dummy(data_batch['lq'])
+        output = restorer.forward_dummy(data_batch["lq"])
     assert torch.is_tensor(output)
     assert output.size() == (1, 3, 80, 80)
 
     # test train_step
     outputs = restorer.train_step(data_batch, optimizer)
     assert isinstance(outputs, dict)
-    assert isinstance(outputs['log_vars'], dict)
-    assert isinstance(outputs['log_vars']['loss_pix'], float)
-    assert outputs['num_samples'] == 1
-    assert torch.equal(outputs['results']['lq'], data_batch['lq'])
-    assert torch.equal(outputs['results']['gt'], data_batch['gt'])
-    assert torch.is_tensor(outputs['results']['output'])
-    assert outputs['results']['output'].size() == (1, 3, 80, 80)
+    assert isinstance(outputs["log_vars"], dict)
+    assert isinstance(outputs["log_vars"]["loss_pix"], float)
+    assert outputs["num_samples"] == 1
+    assert torch.equal(outputs["results"]["lq"], data_batch["lq"])
+    assert torch.equal(outputs["results"]["gt"], data_batch["gt"])
+    assert torch.is_tensor(outputs["results"]["output"])
+    assert outputs["results"]["output"].size() == (1, 3, 80, 80)
 
     # test train_step and forward_test (gpu)
     if torch.cuda.is_available():
         restorer = restorer.cuda()
-        optimizer['generator'] = obj_from_dict(
-            optim_cfg, torch.optim, dict(params=restorer.parameters()))
-        data_batch = {'lq': inputs.cuda(), 'gt': targets.cuda()}
+        optimizer["generator"] = obj_from_dict(optim_cfg, torch.optim, dict(params=restorer.parameters()))
+        data_batch = {"lq": inputs.cuda(), "gt": targets.cuda()}
 
         # test forward train
         outputs = restorer(**data_batch, test_mode=False)
         assert isinstance(outputs, dict)
-        assert isinstance(outputs['losses'], dict)
-        assert isinstance(outputs['losses']['loss_pix'],
-                          torch.cuda.FloatTensor)
-        assert outputs['num_samples'] == 1
-        assert torch.equal(outputs['results']['lq'], data_batch['lq'].cpu())
-        assert torch.equal(outputs['results']['gt'], data_batch['gt'].cpu())
-        assert torch.is_tensor(outputs['results']['output'])
-        assert outputs['results']['output'].size() == (1, 3, 80, 80)
+        assert isinstance(outputs["losses"], dict)
+        assert isinstance(outputs["losses"]["loss_pix"], torch.cuda.FloatTensor)
+        assert outputs["num_samples"] == 1
+        assert torch.equal(outputs["results"]["lq"], data_batch["lq"].cpu())
+        assert torch.equal(outputs["results"]["gt"], data_batch["gt"].cpu())
+        assert torch.is_tensor(outputs["results"]["output"])
+        assert outputs["results"]["output"].size() == (1, 3, 80, 80)
 
         # forward_test
         with torch.no_grad():
             outputs = restorer(**data_batch, test_mode=True)
-        assert torch.equal(outputs['lq'], data_batch['lq'].cpu())
-        assert torch.is_tensor(outputs['output'])
-        assert outputs['output'].size() == (1, 3, 80, 80)
+        assert torch.equal(outputs["lq"], data_batch["lq"].cpu())
+        assert torch.is_tensor(outputs["output"])
+        assert outputs["output"].size() == (1, 3, 80, 80)
 
         # train_step
         outputs = restorer.train_step(data_batch, optimizer)
         assert isinstance(outputs, dict)
-        assert isinstance(outputs['log_vars'], dict)
-        assert isinstance(outputs['log_vars']['loss_pix'], float)
-        assert outputs['num_samples'] == 1
-        assert torch.equal(outputs['results']['lq'], data_batch['lq'].cpu())
-        assert torch.equal(outputs['results']['gt'], data_batch['gt'].cpu())
-        assert torch.is_tensor(outputs['results']['output'])
-        assert outputs['results']['output'].size() == (1, 3, 80, 80)
+        assert isinstance(outputs["log_vars"], dict)
+        assert isinstance(outputs["log_vars"]["loss_pix"], float)
+        assert outputs["num_samples"] == 1
+        assert torch.equal(outputs["results"]["lq"], data_batch["lq"].cpu())
+        assert torch.equal(outputs["results"]["gt"], data_batch["gt"].cpu())
+        assert torch.is_tensor(outputs["results"]["output"])
+        assert outputs["results"]["output"].size() == (1, 3, 80, 80)
 
     # test with metric and save image
-    test_cfg = dict(metrics=('PSNR', 'SSIM'), crop_border=0)
+    test_cfg = dict(metrics=("PSNR", "SSIM"), crop_border=0)
     test_cfg = mmcv.Config(test_cfg)
 
-    data_batch = {
-        'lq': inputs,
-        'gt': targets,
-        'meta': [{
-            'lq_path': 'fake_path/fake_name.png'
-        }]
-    }
+    data_batch = {"lq": inputs, "gt": targets, "meta": [{"lq_path": "fake_path/fake_name.png"}]}
 
     restorer = build_model(model_cfg, train_cfg=train_cfg, test_cfg=test_cfg)
 
@@ -138,33 +121,18 @@ def test_basic_restorer():
         restorer(lq=inputs, test_mode=True)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        outputs = restorer(
-            **data_batch,
-            test_mode=True,
-            save_image=True,
-            save_path=tmpdir,
-            iteration=None)
+        outputs = restorer(**data_batch, test_mode=True, save_image=True, save_path=tmpdir, iteration=None)
         assert isinstance(outputs, dict)
-        assert isinstance(outputs['eval_result'], dict)
-        assert isinstance(outputs['eval_result']['PSNR'], float)
-        assert isinstance(outputs['eval_result']['SSIM'], float)
+        assert isinstance(outputs["eval_result"], dict)
+        assert isinstance(outputs["eval_result"]["PSNR"], float)
+        assert isinstance(outputs["eval_result"]["SSIM"], float)
 
-        outputs = restorer(
-            **data_batch,
-            test_mode=True,
-            save_image=True,
-            save_path=tmpdir,
-            iteration=100)
+        outputs = restorer(**data_batch, test_mode=True, save_image=True, save_path=tmpdir, iteration=100)
         assert isinstance(outputs, dict)
-        assert isinstance(outputs['eval_result'], dict)
-        assert isinstance(outputs['eval_result']['PSNR'], float)
-        assert isinstance(outputs['eval_result']['SSIM'], float)
+        assert isinstance(outputs["eval_result"], dict)
+        assert isinstance(outputs["eval_result"]["PSNR"], float)
+        assert isinstance(outputs["eval_result"]["SSIM"], float)
 
         with pytest.raises(ValueError):
             # iteration should be number or None
-            restorer(
-                **data_batch,
-                test_mode=True,
-                save_image=True,
-                save_path=tmpdir,
-                iteration='100')
+            restorer(**data_batch, test_mode=True, save_image=True, save_path=tmpdir, iteration="100")

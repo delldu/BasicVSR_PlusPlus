@@ -2,4 +2,4 @@
 from .basic_restorer import BasicRestorer
 from .basicvsr import BasicVSR
 
-__all__ = ['BasicRestorer', 'BasicVSR']
+__all__ = ["BasicRestorer", "BasicVSR"]

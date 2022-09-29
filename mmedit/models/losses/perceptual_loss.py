@@ -29,13 +29,9 @@ class PerceptualVGG(nn.Module):
             'torchvision://vgg19'
     """
 
-    def __init__(self,
-                 layer_name_list,
-                 vgg_type='vgg19',
-                 use_input_norm=True,
-                 pretrained='torchvision://vgg19'):
+    def __init__(self, layer_name_list, vgg_type="vgg19", use_input_norm=True, pretrained="torchvision://vgg19"):
         super().__init__()
-        if pretrained.startswith('torchvision://'):
+        if pretrained.startswith("torchvision://"):
             assert vgg_type in pretrained
         self.layer_name_list = layer_name_list
         self.use_input_norm = use_input_norm
@@ -51,13 +47,9 @@ class PerceptualVGG(nn.Module):
 
         if self.use_input_norm:
             # the mean is for image with range [0, 1]
-            self.register_buffer(
-                'mean',
-                torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+            self.register_buffer("mean", torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
             # the std is for image with range [-1, 1]
-            self.register_buffer(
-                'std',
-                torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+            self.register_buffer("std", torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
         for v in self.vgg_layers.parameters():
             v.requires_grad = False
@@ -125,16 +117,18 @@ class PerceptualLoss(nn.Module):
             Default: 'l1'.
     """
 
-    def __init__(self,
-                 layer_weights,
-                 layer_weights_style=None,
-                 vgg_type='vgg19',
-                 use_input_norm=True,
-                 perceptual_weight=1.0,
-                 style_weight=1.0,
-                 norm_img=True,
-                 pretrained='torchvision://vgg19',
-                 criterion='l1'):
+    def __init__(
+        self,
+        layer_weights,
+        layer_weights_style=None,
+        vgg_type="vgg19",
+        use_input_norm=True,
+        perceptual_weight=1.0,
+        style_weight=1.0,
+        norm_img=True,
+        pretrained="torchvision://vgg19",
+        criterion="l1",
+    ):
         super().__init__()
         self.norm_img = norm_img
         self.perceptual_weight = perceptual_weight
@@ -146,28 +140,27 @@ class PerceptualLoss(nn.Module):
             layer_name_list=list(self.layer_weights.keys()),
             vgg_type=vgg_type,
             use_input_norm=use_input_norm,
-            pretrained=pretrained)
+            pretrained=pretrained,
+        )
 
-        if self.layer_weights_style is not None and \
-                self.layer_weights_style != self.layer_weights:
+        if self.layer_weights_style is not None and self.layer_weights_style != self.layer_weights:
             self.vgg_style = PerceptualVGG(
                 layer_name_list=list(self.layer_weights_style.keys()),
                 vgg_type=vgg_type,
                 use_input_norm=use_input_norm,
-                pretrained=pretrained)
+                pretrained=pretrained,
+            )
         else:
             self.layer_weights_style = self.layer_weights
             self.vgg_style = None
 
         criterion = criterion.lower()
-        if criterion == 'l1':
+        if criterion == "l1":
             self.criterion = torch.nn.L1Loss()
-        elif criterion == 'mse':
+        elif criterion == "mse":
             self.criterion = torch.nn.MSELoss()
         else:
-            raise NotImplementedError(
-                f'{criterion} criterion has not been supported in'
-                ' this version.')
+            raise NotImplementedError(f"{criterion} criterion has not been supported in" " this version.")
 
     def forward(self, x, gt):
         """Forward function.
@@ -181,8 +174,8 @@ class PerceptualLoss(nn.Module):
         """
 
         if self.norm_img:
-            x = (x + 1.) * 0.5
-            gt = (gt + 1.) * 0.5
+            x = (x + 1.0) * 0.5
+            gt = (gt + 1.0) * 0.5
         # extract vgg features
         x_features = self.vgg(x)
         gt_features = self.vgg(gt.detach())
@@ -191,8 +184,7 @@ class PerceptualLoss(nn.Module):
         if self.perceptual_weight > 0:
             percep_loss = 0
             for k in x_features.keys():
-                percep_loss += self.criterion(
-                    x_features[k], gt_features[k]) * self.layer_weights[k]
+                percep_loss += self.criterion(x_features[k], gt_features[k]) * self.layer_weights[k]
             percep_loss *= self.perceptual_weight
         else:
             percep_loss = None
@@ -205,10 +197,10 @@ class PerceptualLoss(nn.Module):
 
             style_loss = 0
             for k in x_features.keys():
-                style_loss += self.criterion(
-                    self._gram_mat(x_features[k]),
-                    self._gram_mat(
-                        gt_features[k])) * self.layer_weights_style[k]
+                style_loss += (
+                    self.criterion(self._gram_mat(x_features[k]), self._gram_mat(gt_features[k]))
+                    * self.layer_weights_style[k]
+                )
             style_loss *= self.style_weight
         else:
             style_loss = None
@@ -242,18 +234,17 @@ class TransferalPerceptualLoss(nn.Module):
             Default: 'l1'.
     """
 
-    def __init__(self, loss_weight=1.0, use_attention=True, criterion='mse'):
+    def __init__(self, loss_weight=1.0, use_attention=True, criterion="mse"):
         super().__init__()
         self.use_attention = use_attention
         self.loss_weight = loss_weight
         criterion = criterion.lower()
-        if criterion == 'l1':
+        if criterion == "l1":
             self.loss_function = torch.nn.L1Loss()
-        elif criterion == 'mse':
+        elif criterion == "mse":
             self.loss_function = torch.nn.MSELoss()
         else:
-            raise ValueError(
-                f"criterion should be 'l1' or 'mse', but got {criterion}")
+            raise ValueError(f"criterion should be 'l1' or 'mse', but got {criterion}")
 
     def forward(self, maps, soft_attention, textures):
         """Forward function.
@@ -273,12 +264,11 @@ class TransferalPerceptualLoss(nn.Module):
             for i in range(1, len(maps)):
                 softs.append(
                     F.interpolate(
-                        soft_attention,
-                        size=(h * pow(2, i), w * pow(2, i)),
-                        mode='bicubic',
-                        align_corners=False))
+                        soft_attention, size=(h * pow(2, i), w * pow(2, i)), mode="bicubic", align_corners=False
+                    )
+                )
         else:
-            softs = [1., 1., 1.]
+            softs = [1.0, 1.0, 1.0]
 
         loss_texture = 0
         for map, soft, texture in zip(maps, softs, textures):

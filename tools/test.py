@@ -16,44 +16,35 @@ from mmedit.utils import setup_multi_processes
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='mmediting tester')
-    parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file')
-    parser.add_argument('--seed', type=int, default=None, help='random seed')
+    parser = argparse.ArgumentParser(description="mmediting tester")
+    parser.add_argument("config", help="test config file path")
+    parser.add_argument("checkpoint", help="checkpoint file")
+    parser.add_argument("--seed", type=int, default=None, help="random seed")
     parser.add_argument(
-        '--deterministic',
-        action='store_true',
-        help='whether to set deterministic options for CUDNN backend.')
-    parser.add_argument('--out', help='output result pickle file')
+        "--deterministic", action="store_true", help="whether to set deterministic options for CUDNN backend."
+    )
+    parser.add_argument("--out", help="output result pickle file")
+    parser.add_argument("--gpu-collect", action="store_true", help="whether to use gpu to collect results")
     parser.add_argument(
-        '--gpu-collect',
-        action='store_true',
-        help='whether to use gpu to collect results')
+        "--save-path", default=None, type=str, help="path to store images and if not given, will not save image"
+    )
+    parser.add_argument("--tmpdir", help="tmp dir for writing some results")
     parser.add_argument(
-        '--save-path',
-        default=None,
-        type=str,
-        help='path to store images and if not given, will not save image')
-    parser.add_argument('--tmpdir', help='tmp dir for writing some results')
-    parser.add_argument(
-        '--cfg-options',
-        nargs='+',
+        "--cfg-options",
+        nargs="+",
         action=DictAction,
-        help='override some settings in the used config, the key-value pair '
-        'in xxx=yyy format will be merged into config file. If the value to '
+        help="override some settings in the used config, the key-value pair "
+        "in xxx=yyy format will be merged into config file. If the value to "
         'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
         'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
-        'Note that the quotation marks are necessary and that no white space '
-        'is allowed.')
-    parser.add_argument(
-        '--launcher',
-        choices=['none', 'pytorch', 'slurm', 'mpi'],
-        default='none',
-        help='job launcher')
-    parser.add_argument('--local_rank', type=int, default=0)
+        "Note that the quotation marks are necessary and that no white space "
+        "is allowed.",
+    )
+    parser.add_argument("--launcher", choices=["none", "pytorch", "slurm", "mpi"], default="none", help="job launcher")
+    parser.add_argument("--local_rank", type=int, default=0)
     args = parser.parse_args()
-    if 'LOCAL_RANK' not in os.environ:
-        os.environ['LOCAL_RANK'] = str(args.local_rank)
+    if "LOCAL_RANK" not in os.environ:
+        os.environ["LOCAL_RANK"] = str(args.local_rank)
     return args
 
 
@@ -69,12 +60,12 @@ def main():
     setup_multi_processes(cfg)
 
     # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
+    if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
     cfg.model.pretrained = None
 
     # init distributed env first, since logger depends on the dist info.
-    if args.launcher == 'none':
+    if args.launcher == "none":
         distributed = False
     else:
         distributed = True
@@ -85,7 +76,7 @@ def main():
     # set random seeds
     if args.seed is not None:
         if rank == 0:
-            print('set random seed to', args.seed)
+            print("set random seed to", args.seed)
         set_random_seed(args.seed, deterministic=args.deterministic)
 
     # build the dataloader
@@ -93,13 +84,9 @@ def main():
     dataset = build_dataset(cfg.data.test)
 
     loader_cfg = {
-        **dict((k, cfg.data[k]) for k in ['workers_per_gpu'] if k in cfg.data),
-        **dict(
-            samples_per_gpu=1,
-            drop_last=False,
-            shuffle=False,
-            dist=distributed),
-        **cfg.data.get('test_dataloader', {})
+        **dict((k, cfg.data[k]) for k in ["workers_per_gpu"] if k in cfg.data),
+        **dict(samples_per_gpu=1, drop_last=False, shuffle=False, dist=distributed),
+        **cfg.data.get("test_dataloader", {}),
     }
 
     data_loader = build_dataloader(dataset, **loader_cfg)
@@ -108,28 +95,22 @@ def main():
     model = build_model(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
 
     args.save_image = args.save_path is not None
-    empty_cache = cfg.get('empty_cache', False)
+    empty_cache = cfg.get("empty_cache", False)
     if not distributed:
-        _ = load_checkpoint(model, args.checkpoint, map_location='cpu')
+        _ = load_checkpoint(model, args.checkpoint, map_location="cpu")
         model = MMDataParallel(model, device_ids=[0])
-        outputs = single_gpu_test(
-            model,
-            data_loader,
-            save_path=args.save_path,
-            save_image=args.save_image)
+        outputs = single_gpu_test(model, data_loader, save_path=args.save_path, save_image=args.save_image)
     else:
-        find_unused_parameters = cfg.get('find_unused_parameters', False)
+        find_unused_parameters = cfg.get("find_unused_parameters", False)
         model = DistributedDataParallelWrapper(
             model,
             device_ids=[torch.cuda.current_device()],
             broadcast_buffers=False,
-            find_unused_parameters=find_unused_parameters)
+            find_unused_parameters=find_unused_parameters,
+        )
 
         device_id = torch.cuda.current_device()
-        _ = load_checkpoint(
-            model,
-            args.checkpoint,
-            map_location=lambda storage, loc: storage.cuda(device_id))
+        _ = load_checkpoint(model, args.checkpoint, map_location=lambda storage, loc: storage.cuda(device_id))
         outputs = multi_gpu_test(
             model,
             data_loader,
@@ -137,20 +118,21 @@ def main():
             args.gpu_collect,
             save_path=args.save_path,
             save_image=args.save_image,
-            empty_cache=empty_cache)
+            empty_cache=empty_cache,
+        )
 
-    if rank == 0 and 'eval_result' in outputs[0]:
-        print('')
+    if rank == 0 and "eval_result" in outputs[0]:
+        print("")
         # print metrics
         stats = dataset.evaluate(outputs)
         for stat in stats:
-            print('Eval-{}: {}'.format(stat, stats[stat]))
+            print("Eval-{}: {}".format(stat, stats[stat]))
 
         # save result pickle
         if args.out:
-            print('writing results to {}'.format(args.out))
+            print("writing results to {}".format(args.out))
             mmcv.dump(outputs, args.out)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -6,15 +6,10 @@ from mmedit.models import build_component
 
 
 def test_lte():
-    model_cfg = dict(
-        type='LTE',
-        requires_grad=False,
-        pixel_range=1.,
-        pretrained=None,
-        load_pretrained_vgg=False)
+    model_cfg = dict(type="LTE", requires_grad=False, pixel_range=1.0, pretrained=None, load_pretrained_vgg=False)
 
     lte = build_component(model_cfg)
-    assert lte.__class__.__name__ == 'LTE'
+    assert lte.__class__.__name__ == "LTE"
 
     x = torch.rand(2, 3, 64, 64)
 
@@ -25,9 +20,9 @@ def test_lte():
 
     lte.init_weights(None)
     with pytest.raises(IOError):
-        model_cfg['pretrained'] = ''
+        model_cfg["pretrained"] = ""
         lte = build_component(model_cfg)
         x_level3, x_level2, x_level1 = lte(x)
-        lte.init_weights('')
+        lte.init_weights("")
     with pytest.raises(TypeError):
         lte.init_weights(1)

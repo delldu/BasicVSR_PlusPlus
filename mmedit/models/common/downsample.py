@@ -12,9 +12,7 @@ def pixel_unshuffle(x, scale):
 
     b, c, h, w = x.shape
     if h % scale != 0 or w % scale != 0:
-        raise AssertionError(
-            f'Invalid scale ({scale}) of pixel unshuffle for tensor '
-            f'with shape: {x.shape}')
+        raise AssertionError(f"Invalid scale ({scale}) of pixel unshuffle for tensor " f"with shape: {x.shape}")
     h = int(h / scale)
     w = int(w / scale)
     x = x.view(b, c, h, scale, w, scale)

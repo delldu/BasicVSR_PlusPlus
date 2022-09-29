@@ -45,16 +45,18 @@ class GCAModule(nn.Module):
             the normed image feature patch. Default: 1e-4.
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size=3,
-                 stride=1,
-                 rate=2,
-                 pad_args=dict(mode='reflect'),
-                 interpolation='nearest',
-                 penalty=-1e4,
-                 eps=1e-4):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        stride=1,
+        rate=2,
+        pad_args=dict(mode="reflect"),
+        interpolation="nearest",
+        penalty=-1e4,
+        eps=1e-4,
+    ):
         super().__init__()
         self.kernel_size = kernel_size
         self.stride = stride
@@ -68,21 +70,16 @@ class GCAModule(nn.Module):
         self.guidance_conv = nn.Conv2d(in_channels, in_channels // 2, 1)
 
         # convolution after the attention alpha feature
-        self.out_conv = ConvModule(
-            out_channels,
-            out_channels,
-            1,
-            norm_cfg=dict(type='BN'),
-            act_cfg=None)
+        self.out_conv = ConvModule(out_channels, out_channels, 1, norm_cfg=dict(type="BN"), act_cfg=None)
 
         self.init_weights()
 
     def init_weights(self):
-        xavier_init(self.guidance_conv, distribution='uniform')
-        xavier_init(self.out_conv.conv, distribution='uniform')
+        xavier_init(self.guidance_conv, distribution="uniform")
+        xavier_init(self.out_conv.conv, distribution="uniform")
         constant_init(self.out_conv.norm, 1e-3)
 
-    def forward(self, img_feat, alpha_feat, unknown=None, softmax_scale=1.):
+    def forward(self, img_feat, alpha_feat, unknown=None, softmax_scale=1.0):
         """Forward function of GCAModule.
 
         Args:
@@ -102,27 +99,26 @@ class GCAModule(nn.Module):
 
         if alpha_feat.shape[2:4] != img_feat.shape[2:4]:
             raise ValueError(
-                'image feature size does not align with alpha feature size: '
-                f'image feature size {img_feat.shape[2:4]}, '
-                f'alpha feature size {alpha_feat.shape[2:4]}')
+                "image feature size does not align with alpha feature size: "
+                f"image feature size {img_feat.shape[2:4]}, "
+                f"alpha feature size {alpha_feat.shape[2:4]}"
+            )
 
         if unknown is not None and unknown.shape[2:4] != img_feat.shape[2:4]:
             raise ValueError(
-                'image feature size does not align with unknown mask size: '
-                f'image feature size {img_feat.shape[2:4]}, '
-                f'unknown mask size {unknown.shape[2:4]}')
+                "image feature size does not align with unknown mask size: "
+                f"image feature size {img_feat.shape[2:4]}, "
+                f"unknown mask size {unknown.shape[2:4]}"
+            )
 
         # preprocess image feature
         img_feat = self.guidance_conv(img_feat)
-        img_feat = F.interpolate(
-            img_feat, scale_factor=1 / self.rate, mode=self.interpolation)
+        img_feat = F.interpolate(img_feat, scale_factor=1 / self.rate, mode=self.interpolation)
 
         # preprocess unknown mask
-        unknown, softmax_scale = self.process_unknown_mask(
-            unknown, img_feat, softmax_scale)
+        unknown, softmax_scale = self.process_unknown_mask(unknown, img_feat, softmax_scale)
 
-        img_ps, alpha_ps, unknown_ps = self.extract_feature_maps_patches(
-            img_feat, alpha_feat, unknown)
+        img_ps, alpha_ps, unknown_ps = self.extract_feature_maps_patches(img_feat, alpha_feat, unknown)
 
         # create self correlation mask with shape:
         # (N, img_h*img_w, img_h, img_w)
@@ -134,16 +130,14 @@ class GCAModule(nn.Module):
         alpha_ps_groups = torch.split(alpha_ps, 1, dim=0)
         unknown_ps_groups = torch.split(unknown_ps, 1, dim=0)
         scale_groups = torch.split(softmax_scale, 1, dim=0)
-        groups = (img_groups, img_ps_groups, alpha_ps_groups,
-                  unknown_ps_groups, scale_groups)
+        groups = (img_groups, img_ps_groups, alpha_ps_groups, unknown_ps_groups, scale_groups)
 
         out = []
         # i is the virtual index of the sample in the current batch
         for img_i, img_ps_i, alpha_ps_i, unknown_ps_i, scale_i in zip(*groups):
             similarity_map = self.compute_similarity_map(img_i, img_ps_i)
 
-            gca_score = self.compute_guided_attention_score(
-                similarity_map, unknown_ps_i, scale_i, self_mask)
+            gca_score = self.compute_guided_attention_score(similarity_map, unknown_ps_i, scale_i, self_mask)
 
             out_i = self.propagate_alpha_feature(gca_score, alpha_ps_i)
 
@@ -215,8 +209,7 @@ class GCAModule(nn.Module):
 
         return similarity_map
 
-    def compute_guided_attention_score(self, similarity_map, unknown_ps, scale,
-                                       self_mask):
+    def compute_guided_attention_score(self, similarity_map, unknown_ps, scale, self_mask):
         """Compute guided attention score.
 
         Args:
@@ -238,9 +231,7 @@ class GCAModule(nn.Module):
         # scale the correlation with predicted scale factor for known and
         # unknown area
         unknown_scale, known_scale = scale[0]
-        out = similarity_map * (
-            unknown_scale * unknown_ps.gt(0.).float() +
-            known_scale * unknown_ps.le(0.).float())
+        out = similarity_map * (unknown_scale * unknown_ps.gt(0.0).float() + known_scale * unknown_ps.le(0.0).float())
         # mask itself, self-mask only applied to unknown area
         out = out + self_mask * unknown_ps
         gca_score = F.softmax(out, dim=1)
@@ -264,10 +255,9 @@ class GCAModule(nn.Module):
         if self.rate == 1:
             gca_score = self.pad(gca_score, kernel_size=2, stride=1)
             alpha_ps = alpha_ps.permute(1, 0, 2, 3)
-            out = F.conv2d(gca_score, alpha_ps) / 4.
+            out = F.conv2d(gca_score, alpha_ps) / 4.0
         else:
-            out = F.conv_transpose2d(
-                gca_score, alpha_ps, stride=self.rate, padding=1) / 4.
+            out = F.conv_transpose2d(gca_score, alpha_ps, stride=self.rate, padding=1) / 4.0
 
         return out
 
@@ -295,20 +285,15 @@ class GCAModule(nn.Module):
 
         if unknown is not None:
             unknown = unknown.clone()
-            unknown = F.interpolate(
-                unknown, scale_factor=1 / self.rate, mode=self.interpolation)
+            unknown = F.interpolate(unknown, scale_factor=1 / self.rate, mode=self.interpolation)
             unknown_mean = unknown.mean(dim=[2, 3])
             known_mean = 1 - unknown_mean
-            unknown_scale = torch.clamp(
-                torch.sqrt(unknown_mean / known_mean), 0.1, 10).to(img_feat)
-            known_scale = torch.clamp(
-                torch.sqrt(known_mean / unknown_mean), 0.1, 10).to(img_feat)
+            unknown_scale = torch.clamp(torch.sqrt(unknown_mean / known_mean), 0.1, 10).to(img_feat)
+            known_scale = torch.clamp(torch.sqrt(known_mean / unknown_mean), 0.1, 10).to(img_feat)
             softmax_scale = torch.cat([unknown_scale, known_scale], dim=1)
         else:
             unknown = torch.ones((n, 1, h, w)).to(img_feat)
-            softmax_scale = torch.FloatTensor(
-                [softmax_scale,
-                 softmax_scale]).view(1, 2).repeat(n, 1).to(img_feat)
+            softmax_scale = torch.FloatTensor([softmax_scale, softmax_scale]).view(1, 2).repeat(n, 1).to(img_feat)
 
         return unknown, softmax_scale
 
@@ -344,8 +329,7 @@ class GCAModule(nn.Module):
         _, _, h, w = img_feat.shape
         # As ONNX does not support dynamic num_classes, we have to convert it
         # into an integer
-        self_mask = F.one_hot(
-            torch.arange(h * w).view(h, w), num_classes=int(h * w))
+        self_mask = F.one_hot(torch.arange(h * w).view(h, w), num_classes=int(h * w))
         self_mask = self_mask.permute(2, 0, 1).view(1, h * w, h, w)
         # use large negative value to mask out self-correlation before softmax
         self_mask = self_mask * self.penalty
@@ -353,6 +337,6 @@ class GCAModule(nn.Module):
 
     @staticmethod
     def l2_norm(x):
-        x = x**2
+        x = x ** 2
         x = x.sum(dim=[1, 2, 3], keepdim=True)
         return torch.sqrt(x)

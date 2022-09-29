@@ -4,8 +4,7 @@ import torch
 
 from mmedit.models import build_component
 from mmedit.models.extractors import Hourglass
-from mmedit.models.extractors.feedback_hour_glass import (
-    ResBlock, reduce_to_five_heatmaps)
+from mmedit.models.extractors.feedback_hour_glass import ResBlock, reduce_to_five_heatmaps
 
 
 def test_res_block():
@@ -29,11 +28,10 @@ def test_hour_glass():
 
 
 def test_feedback_hour_glass():
-    model_cfg = dict(
-        type='FeedbackHourglass', mid_channels=16, num_keypoints=20)
+    model_cfg = dict(type="FeedbackHourglass", mid_channels=16, num_keypoints=20)
 
     fhg = build_component(model_cfg)
-    assert fhg.__class__.__name__ == 'FeedbackHourglass'
+    assert fhg.__class__.__name__ == "FeedbackHourglass"
 
     x = torch.rand(2, 3, 64, 64)
     heatmap, last_hidden = fhg.forward(x)

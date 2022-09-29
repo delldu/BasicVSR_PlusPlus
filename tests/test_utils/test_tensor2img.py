@@ -52,9 +52,7 @@ def test_tensor2img():
     np.testing.assert_almost_equal(rlt, (tensor_4d_4_np * 255).round())
 
     # 3d
-    rlt = tensor2img([tensor_3d_1, tensor_3d_2],
-                     out_type=np.uint8,
-                     min_max=(0, 1))
+    rlt = tensor2img([tensor_3d_1, tensor_3d_2], out_type=np.uint8, min_max=(0, 1))
     assert rlt[0].dtype == np.uint8
     tensor_3d_1_np = tensor_3d_1.numpy()
     tensor_3d_1_np = np.transpose(tensor_3d_1_np[[2, 1, 0], :, :], (1, 2, 0))

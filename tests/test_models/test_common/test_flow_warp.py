@@ -23,8 +23,7 @@ def tensor_shift(x, shift=(1, 1), fill_val=0):
 
     len_h = h - shift_h
     len_w = w - shift_w
-    new[:, :, shift_h:shift_h + len_h,
-        shift_w:shift_w + len_w] = x.narrow(2, 0, len_h).narrow(3, 0, len_w)
+    new[:, :, shift_h : shift_h + len_h, shift_w : shift_w + len_w] = x.narrow(2, 0, len_h).narrow(3, 0, len_w)
     return new
 
 

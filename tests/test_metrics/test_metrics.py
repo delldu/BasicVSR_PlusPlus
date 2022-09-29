@@ -3,9 +3,7 @@ import mmcv
 import numpy as np
 import pytest
 
-from mmedit.core.evaluation.metrics import (connectivity, gradient_error, mse,
-                                            niqe, psnr, reorder_image, sad,
-                                            ssim)
+from mmedit.core.evaluation.metrics import connectivity, gradient_error, mse, niqe, psnr, reorder_image, sad, ssim
 
 
 def test_reorder_image():
@@ -14,7 +12,7 @@ def test_reorder_image():
     img_chw = np.ones((3, 32, 32))
 
     with pytest.raises(ValueError):
-        reorder_image(img_hw, 'HH')
+        reorder_image(img_hw, "HH")
 
     output = reorder_image(img_hw)
     assert output.shape == (32, 32, 1)
@@ -22,7 +20,7 @@ def test_reorder_image():
     output = reorder_image(img_hwc)
     assert output.shape == (32, 32, 3)
 
-    output = reorder_image(img_chw, input_order='CHW')
+    output = reorder_image(img_chw, input_order="CHW")
     assert output.shape == (32, 32, 3)
 
 
@@ -35,33 +33,33 @@ def test_calculate_psnr():
     img_chw_2 = np.ones((3, 32, 32)) * 2
 
     with pytest.raises(ValueError):
-        psnr(img_hw_1, img_hw_2, crop_border=0, input_order='HH')
+        psnr(img_hw_1, img_hw_2, crop_border=0, input_order="HH")
 
     with pytest.raises(ValueError):
-        psnr(img_hw_1, img_hw_2, crop_border=0, convert_to='ABC')
+        psnr(img_hw_1, img_hw_2, crop_border=0, convert_to="ABC")
 
     psnr_result = psnr(img_hw_1, img_hw_2, crop_border=0)
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
-    psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=0, input_order='HWC')
+    psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=0, input_order="HWC")
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
-    psnr_result = psnr(img_chw_1, img_chw_2, crop_border=0, input_order='CHW')
+    psnr_result = psnr(img_chw_1, img_chw_2, crop_border=0, input_order="CHW")
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
 
     psnr_result = psnr(img_hw_1, img_hw_2, crop_border=2)
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
-    psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=3, input_order='HWC')
+    psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=3, input_order="HWC")
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
-    psnr_result = psnr(img_chw_1, img_chw_2, crop_border=4, input_order='CHW')
+    psnr_result = psnr(img_chw_1, img_chw_2, crop_border=4, input_order="CHW")
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
 
     psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=0, convert_to=None)
     np.testing.assert_almost_equal(psnr_result, 48.1308036)
-    psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=0, convert_to='Y')
+    psnr_result = psnr(img_hwc_1, img_hwc_2, crop_border=0, convert_to="Y")
     np.testing.assert_almost_equal(psnr_result, 49.4527218)
 
     # test float inf
     psnr_result = psnr(img_hw_1, img_hw_1, crop_border=0)
-    assert psnr_result == float('inf')
+    assert psnr_result == float("inf")
 
     # test uint8
     img_hw_1 = np.zeros((32, 32), dtype=np.uint8)
@@ -79,62 +77,50 @@ def test_calculate_ssim():
     img_chw_2 = np.ones((3, 32, 32)) * 2
 
     with pytest.raises(ValueError):
-        ssim(img_hw_1, img_hw_2, crop_border=0, input_order='HH')
+        ssim(img_hw_1, img_hw_2, crop_border=0, input_order="HH")
 
     with pytest.raises(ValueError):
-        ssim(img_hw_1, img_hw_2, crop_border=0, input_order='ABC')
+        ssim(img_hw_1, img_hw_2, crop_border=0, input_order="ABC")
 
     ssim_result = ssim(img_hw_1, img_hw_2, crop_border=0)
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
-    ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=0, input_order='HWC')
+    ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=0, input_order="HWC")
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
-    ssim_result = ssim(img_chw_1, img_chw_2, crop_border=0, input_order='CHW')
+    ssim_result = ssim(img_chw_1, img_chw_2, crop_border=0, input_order="CHW")
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
 
     ssim_result = ssim(img_hw_1, img_hw_2, crop_border=2)
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
-    ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=3, input_order='HWC')
+    ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=3, input_order="HWC")
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
-    ssim_result = ssim(img_chw_1, img_chw_2, crop_border=4, input_order='CHW')
+    ssim_result = ssim(img_chw_1, img_chw_2, crop_border=4, input_order="CHW")
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
 
     ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=0, convert_to=None)
     np.testing.assert_almost_equal(ssim_result, 0.9130623)
-    ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=0, convert_to='Y')
+    ssim_result = ssim(img_hwc_1, img_hwc_2, crop_border=0, convert_to="Y")
     np.testing.assert_almost_equal(ssim_result, 0.9987801)
 
 
 def test_calculate_niqe():
-    img = mmcv.imread('tests/data/gt/baboon.png')
+    img = mmcv.imread("tests/data/gt/baboon.png")
 
-    result = niqe(img[:, :, 0], crop_border=0, input_order='HW')
+    result = niqe(img[:, :, 0], crop_border=0, input_order="HW")
     np.testing.assert_almost_equal(result, 5.62525, decimal=5)
-    result = niqe(img, crop_border=0, input_order='HWC', convert_to='y')
+    result = niqe(img, crop_border=0, input_order="HWC", convert_to="y")
     np.testing.assert_almost_equal(result, 5.72957, decimal=5)
-    result = niqe(img, crop_border=0, input_order='HWC', convert_to='gray')
+    result = niqe(img, crop_border=0, input_order="HWC", convert_to="gray")
     np.testing.assert_almost_equal(result, 5.73154, decimal=5)
-    result = niqe(
-        img.transpose(2, 0, 1),
-        crop_border=0,
-        input_order='CHW',
-        convert_to='y')
+    result = niqe(img.transpose(2, 0, 1), crop_border=0, input_order="CHW", convert_to="y")
     np.testing.assert_almost_equal(result, 5.72957, decimal=5)
-    result = niqe(
-        img.transpose(2, 0, 1),
-        crop_border=0,
-        input_order='CHW',
-        convert_to='gray')
+    result = niqe(img.transpose(2, 0, 1), crop_border=0, input_order="CHW", convert_to="gray")
     np.testing.assert_almost_equal(result, 5.73154, decimal=5)
 
-    result = niqe(img[:, :, 0], crop_border=6, input_order='HW')
+    result = niqe(img[:, :, 0], crop_border=6, input_order="HW")
     np.testing.assert_almost_equal(result, 5.82981, decimal=5)
-    result = niqe(img, crop_border=6, input_order='HWC', convert_to='y')
+    result = niqe(img, crop_border=6, input_order="HWC", convert_to="y")
     np.testing.assert_almost_equal(result, 6.10074, decimal=5)
-    result = niqe(
-        img.transpose(2, 0, 1),
-        crop_border=6,
-        input_order='CHW',
-        convert_to='y')
+    result = niqe(img.transpose(2, 0, 1), crop_border=6, input_order="CHW", convert_to="y")
     np.testing.assert_almost_equal(result, 6.10074, decimal=5)
 
 

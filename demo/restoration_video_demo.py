@@ -12,42 +12,29 @@ from mmedit.core import tensor2img
 from mmedit.utils import modify_args
 import pdb
 
-VIDEO_EXTENSIONS = ('.mp4', '.mov')
+VIDEO_EXTENSIONS = (".mp4", ".mov")
 
 
 def parse_args():
     modify_args()
-    parser = argparse.ArgumentParser(description='Restoration demo')
-    parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file')
-    parser.add_argument('input_dir', help='directory of the input video')
-    parser.add_argument('output_dir', help='directory of the output video')
+    parser = argparse.ArgumentParser(description="Restoration demo")
+    parser.add_argument("config", help="test config file path")
+    parser.add_argument("checkpoint", help="checkpoint file")
+    parser.add_argument("input_dir", help="directory of the input video")
+    parser.add_argument("output_dir", help="directory of the output video")
+    parser.add_argument("--start-idx", type=int, default=1, help="index corresponds to the first frame of the sequence")
+    parser.add_argument("--filename-tmpl", default="{:06d}.png", help="template of the file names")
+    parser.add_argument("--window-size", type=int, default=0, help="window size if sliding-window framework is used")
     parser.add_argument(
-        '--start-idx',
-        type=int,
-        default=1,
-        help='index corresponds to the first frame of the sequence')
-    parser.add_argument(
-        '--filename-tmpl',
-        default='{:06d}.png',
-        help='template of the file names')
-    parser.add_argument(
-        '--window-size',
-        type=int,
-        default=0,
-        help='window size if sliding-window framework is used')
-    parser.add_argument(
-        '--max-seq-len',
-        type=int,
-        default=1,
-        help='maximum sequence length if recurrent framework is used')
-    parser.add_argument('--device', type=int, default=0, help='CUDA device id')
+        "--max-seq-len", type=int, default=1, help="maximum sequence length if recurrent framework is used"
+    )
+    parser.add_argument("--device", type=int, default=0, help="CUDA device id")
     args = parser.parse_args()
     return args
 
 
 def main():
-    """ Demo for video restoration models.
+    """Demo for video restoration models.
 
     Note that we accept video as input/output, when 'input_dir'/'output_dir'
     is set to the path to the video. But using videos introduces video
@@ -57,31 +44,30 @@ def main():
 
     args = parse_args()
 
-    model = init_model(
-        args.config, args.checkpoint, device=torch.device('cuda', args.device))
+    model = init_model(args.config, args.checkpoint, device=torch.device("cuda", args.device))
 
     # model -- BasicVSR
-    # pp args.input_dir, args.window_size -- ('data/demo_000', 0) 
+    # pp args.input_dir, args.window_size -- ('data/demo_000', 0)
     # pp args.start_idx, args.filename_tmpl, args.max_seq_len -- (0, '{:08d}.png', None)
 
     # torch.save(model.generator.state_dict(), "/tmp/video_zoom4x.pth")
 
     # Denoise:
     # torch.save(model.generator.state_dict(), "/tmp/video_denoise.pth")
-    # 
+    #
 
     pdb.set_trace()
     #
     # torch.save(model.generator.state_dict(), "/tmp/video_deblur.pth")
 
-    output = restoration_video_inference(model, args.input_dir,
-                                         args.window_size, args.start_idx,
-                                         args.filename_tmpl, args.max_seq_len)
+    output = restoration_video_inference(
+        model, args.input_dir, args.window_size, args.start_idx, args.filename_tmpl, args.max_seq_len
+    )
 
     file_extension = os.path.splitext(args.output_dir)[1]
     if file_extension in VIDEO_EXTENSIONS:  # save as video
         h, w = output.shape[-2:]
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         video_writer = cv2.VideoWriter(args.output_dir, fourcc, 25, (w, h))
         for i in range(0, output.size(1)):
             img = tensor2img(output[:, i, :, :, :])
@@ -92,10 +78,10 @@ def main():
         for i in range(args.start_idx, args.start_idx + output.size(1)):
             output_i = output[:, i - args.start_idx, :, :, :]
             output_i = tensor2img(output_i)
-            save_path_i = f'{args.output_dir}/{args.filename_tmpl.format(i)}'
+            save_path_i = f"{args.output_dir}/{args.filename_tmpl.format(i)}"
 
             mmcv.imwrite(output_i, save_path_i)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

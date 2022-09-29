@@ -1,8 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 
-from mmedit.models import (ContextualAttentionNeck, DeepFillDecoder,
-                           DeepFillEncoder, DeepFillRefiner, GLDilationNeck)
+from mmedit.models import ContextualAttentionNeck, DeepFillDecoder, DeepFillEncoder, DeepFillRefiner, GLDilationNeck
 
 
 def test_deepfill_refiner():
@@ -10,7 +9,7 @@ def test_deepfill_refiner():
 
     x = torch.rand((2, 5, 256, 256))
     mask = x.new_ones((2, 1, 256, 256))
-    mask[..., 30:100, 40:100] = 0.
+    mask[..., 30:100, 40:100] = 0.0
     res, offset = refiner(x, mask)
     assert res.shape == (2, 3, 256, 256)
     assert offset.shape == (2, 32, 32, 32, 32)
@@ -18,8 +17,7 @@ def test_deepfill_refiner():
     # check model architecture
     assert isinstance(refiner.encoder_attention, DeepFillEncoder)
     assert isinstance(refiner.encoder_conv, DeepFillEncoder)
-    assert isinstance(refiner.contextual_attention_neck,
-                      ContextualAttentionNeck)
+    assert isinstance(refiner.contextual_attention_neck, ContextualAttentionNeck)
     assert isinstance(refiner.decoder, DeepFillDecoder)
     assert isinstance(refiner.dilation_neck, GLDilationNeck)
 
@@ -34,7 +32,6 @@ def test_deepfill_refiner():
         # check model architecture
         assert isinstance(refiner.encoder_attention, DeepFillEncoder)
         assert isinstance(refiner.encoder_conv, DeepFillEncoder)
-        assert isinstance(refiner.contextual_attention_neck,
-                          ContextualAttentionNeck)
+        assert isinstance(refiner.contextual_attention_neck, ContextualAttentionNeck)
         assert isinstance(refiner.decoder, DeepFillDecoder)
         assert isinstance(refiner.dilation_neck, GLDilationNeck)

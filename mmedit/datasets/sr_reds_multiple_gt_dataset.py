@@ -26,20 +26,21 @@ class SRREDSMultipleGTDataset(BaseSRDataset):
             Default: `False`.
     """
 
-    def __init__(self,
-                 lq_folder,
-                 gt_folder,
-                 num_input_frames,
-                 pipeline,
-                 scale,
-                 val_partition='official',
-                 repeat=1,
-                 test_mode=False):
+    def __init__(
+        self,
+        lq_folder,
+        gt_folder,
+        num_input_frames,
+        pipeline,
+        scale,
+        val_partition="official",
+        repeat=1,
+        test_mode=False,
+    ):
 
         self.repeat = repeat
         if not isinstance(repeat, int):
-            raise TypeError('"repeat" must be an integer, but got '
-                            f'{type(repeat)}.')
+            raise TypeError('"repeat" must be an integer, but got ' f"{type(repeat)}.")
 
         super().__init__(pipeline, scale, test_mode)
         self.lq_folder = str(lq_folder)
@@ -55,16 +56,16 @@ class SRREDSMultipleGTDataset(BaseSRDataset):
             list[dict]: A list of dicts for paired paths and other information.
         """
         # generate keys
-        keys = [f'{i:03d}' for i in range(0, 270)]
+        keys = [f"{i:03d}" for i in range(0, 270)]
 
-        if self.val_partition == 'REDS4':
-            val_partition = ['000', '011', '015', '020']
-        elif self.val_partition == 'official':
-            val_partition = [f'{i:03d}' for i in range(240, 270)]
+        if self.val_partition == "REDS4":
+            val_partition = ["000", "011", "015", "020"]
+        elif self.val_partition == "official":
+            val_partition = [f"{i:03d}" for i in range(240, 270)]
         else:
             raise ValueError(
-                f'Wrong validation partition {self.val_partition}.'
-                f'Supported ones are ["official", "REDS4"]')
+                f"Wrong validation partition {self.val_partition}." f'Supported ones are ["official", "REDS4"]'
+            )
 
         if self.test_mode:
             keys = [v for v in keys if v in val_partition]
@@ -80,6 +81,8 @@ class SRREDSMultipleGTDataset(BaseSRDataset):
                     gt_path=self.gt_folder,
                     key=key,
                     sequence_length=100,  # REDS has 100 frames for each clip
-                    num_input_frames=self.num_input_frames))
+                    num_input_frames=self.num_input_frames,
+                )
+            )
 
         return data_infos

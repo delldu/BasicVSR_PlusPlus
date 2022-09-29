@@ -11,12 +11,8 @@ def test_iconvsr():
     # gpu (since IconVSR contains DCN, only GPU mode is available)
     if torch.cuda.is_available():
         iconvsr = IconVSR(
-            mid_channels=64,
-            num_blocks=30,
-            keyframe_stride=5,
-            padding=2,
-            spynet_pretrained=None,
-            edvr_pretrained=None).cuda()
+            mid_channels=64, num_blocks=30, keyframe_stride=5, padding=2, spynet_pretrained=None, edvr_pretrained=None
+        ).cuda()
 
         input_tensor = torch.rand(1, 5, 3, 64, 64).cuda()
         iconvsr.init_weights(pretrained=None)
@@ -40,7 +36,8 @@ def test_iconvsr():
                 keyframe_stride=5,
                 padding=2,
                 spynet_pretrained=123,
-                edvr_pretrained=None).cuda()
+                edvr_pretrained=None,
+            ).cuda()
 
         # edvr_pretrained should be str or None
         with pytest.raises(TypeError):
@@ -50,4 +47,5 @@ def test_iconvsr():
                 keyframe_stride=5,
                 padding=2,
                 spynet_pretrained=None,
-                edvr_pretrained=123).cuda()
+                edvr_pretrained=123,
+            ).cuda()

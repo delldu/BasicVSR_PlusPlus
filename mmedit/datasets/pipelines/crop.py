@@ -26,8 +26,9 @@ class Crop:
     def __init__(self, keys, crop_size, random_crop=True, is_pad_zeros=False):
         if not mmcv.is_tuple_of(crop_size, int):
             raise TypeError(
-                'Elements of crop_size must be int and crop_size must be'
-                f' tuple, but got {type(crop_size[0])} in {type(crop_size)}')
+                "Elements of crop_size must be int and crop_size must be"
+                f" tuple, but got {type(crop_size[0])} in {type(crop_size)}"
+            )
 
         self.keys = keys
         self.crop_size = crop_size
@@ -57,15 +58,10 @@ class Crop:
                     crop_x_offset = (crop_w - data_w) // 2
 
                 if crop_y_offset > 0 or crop_x_offset > 0:
-                    pad_width = [(2 * crop_y_offset, 2 * crop_y_offset),
-                                 (2 * crop_x_offset, 2 * crop_x_offset)]
+                    pad_width = [(2 * crop_y_offset, 2 * crop_y_offset), (2 * crop_x_offset, 2 * crop_x_offset)]
                     if item.ndim == 3:
                         pad_width.append((0, 0))
-                    item = np.pad(
-                        item,
-                        tuple(pad_width),
-                        mode='constant',
-                        constant_values=0)
+                    item = np.pad(item, tuple(pad_width), mode="constant", constant_values=0)
 
                 data_h, data_w = item.shape[:2]
 
@@ -80,8 +76,7 @@ class Crop:
                 y_offset = max(0, (data_h - crop_h)) // 2
 
             crop_bbox = [x_offset, y_offset, crop_w, crop_h]
-            item_ = item[y_offset:y_offset + crop_h,
-                         x_offset:x_offset + crop_w, ...]
+            item_ = item[y_offset : y_offset + crop_h, x_offset : x_offset + crop_w, ...]
             crop_bbox_list.append(crop_bbox)
             data_list_.append(item_)
 
@@ -102,14 +97,13 @@ class Crop:
         for k in self.keys:
             data_, crop_bbox = self._crop(results[k])
             results[k] = data_
-            results[k + '_crop_bbox'] = crop_bbox
-        results['crop_size'] = self.crop_size
+            results[k + "_crop_bbox"] = crop_bbox
+        results["crop_size"] = self.crop_size
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'keys={self.keys}, crop_size={self.crop_size}, '
-                     f'random_crop={self.random_crop}')
+        repr_str += f"keys={self.keys}, crop_size={self.crop_size}, " f"random_crop={self.random_crop}"
 
         return repr_str
 
@@ -141,25 +135,16 @@ class RandomResizedCrop(object):
             Default: "bilinear".
     """
 
-    def __init__(self,
-                 keys,
-                 crop_size,
-                 scale=(0.08, 1.0),
-                 ratio=(3. / 4., 4. / 3.),
-                 interpolation='bilinear'):
-        assert keys, 'Keys should not be empty.'
+    def __init__(self, keys, crop_size, scale=(0.08, 1.0), ratio=(3.0 / 4.0, 4.0 / 3.0), interpolation="bilinear"):
+        assert keys, "Keys should not be empty."
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         elif not mmcv.is_tuple_of(crop_size, int):
-            raise TypeError('"crop_size" must be an integer '
-                            'or a tuple of integers, but got '
-                            f'{type(crop_size)}')
+            raise TypeError('"crop_size" must be an integer ' "or a tuple of integers, but got " f"{type(crop_size)}")
         if not mmcv.is_tuple_of(scale, float):
-            raise TypeError('"scale" must be a tuple of float, '
-                            f'but got {type(scale)}')
+            raise TypeError('"scale" must be a tuple of float, ' f"but got {type(scale)}")
         if not mmcv.is_tuple_of(ratio, float):
-            raise TypeError('"ratio" must be a tuple of float, '
-                            f'but got {type(ratio)}')
+            raise TypeError('"ratio" must be a tuple of float, ' f"but got {type(ratio)}")
 
         self.keys = keys
         self.crop_size = crop_size
@@ -195,10 +180,10 @@ class RandomResizedCrop(object):
 
         # Fall back to center crop
         in_ratio = float(data_w) / float(data_h)
-        if (in_ratio < min(self.ratio)):
+        if in_ratio < min(self.ratio):
             crop_w = data_w
             crop_h = int(round(crop_w / min(self.ratio)))
-        elif (in_ratio > max(self.ratio)):
+        elif in_ratio > max(self.ratio):
             crop_h = data_h
             crop_w = int(round(crop_h * max(self.ratio)))
         else:  # whole image
@@ -221,20 +206,18 @@ class RandomResizedCrop(object):
         for k in self.keys:
             top, left, crop_h, crop_w = self.get_params(results[k])
             crop_bbox = [top, left, crop_w, crop_h]
-            results[k] = results[k][top:top + crop_h, left:left + crop_w, ...]
-            results[k] = mmcv.imresize(
-                results[k],
-                self.crop_size,
-                return_scale=False,
-                interpolation=self.interpolation)
-            results[k + '_crop_bbox'] = crop_bbox
+            results[k] = results[k][top : top + crop_h, left : left + crop_w, ...]
+            results[k] = mmcv.imresize(results[k], self.crop_size, return_scale=False, interpolation=self.interpolation)
+            results[k + "_crop_bbox"] = crop_bbox
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, crop_size={self.crop_size}, '
-                     f'scale={self.scale}, ratio={self.ratio}, '
-                     f'interpolation={self.interpolation})')
+        repr_str += (
+            f"(keys={self.keys}, crop_size={self.crop_size}, "
+            f"scale={self.scale}, ratio={self.ratio}, "
+            f"interpolation={self.interpolation})"
+        )
         return repr_str
 
 
@@ -252,13 +235,15 @@ class FixedCrop:
     def __init__(self, keys, crop_size, crop_pos=None):
         if not mmcv.is_tuple_of(crop_size, int):
             raise TypeError(
-                'Elements of crop_size must be int and crop_size must be'
-                f' tuple, but got {type(crop_size[0])} in {type(crop_size)}')
+                "Elements of crop_size must be int and crop_size must be"
+                f" tuple, but got {type(crop_size[0])} in {type(crop_size)}"
+            )
         if not mmcv.is_tuple_of(crop_pos, int) and (crop_pos is not None):
             raise TypeError(
-                'Elements of crop_pos must be int and crop_pos must be'
-                f' tuple or None, but got {type(crop_pos[0])} in '
-                f'{type(crop_pos)}')
+                "Elements of crop_pos must be int and crop_pos must be"
+                f" tuple or None, but got {type(crop_pos[0])} in "
+                f"{type(crop_pos)}"
+            )
 
         self.keys = keys
         self.crop_size = crop_size
@@ -266,8 +251,7 @@ class FixedCrop:
 
     def _crop(self, data, x_offset, y_offset, crop_w, crop_h):
         crop_bbox = [x_offset, y_offset, crop_w, crop_h]
-        data_ = data[y_offset:y_offset + crop_h, x_offset:x_offset + crop_w,
-                     ...]
+        data_ = data[y_offset : y_offset + crop_h, x_offset : x_offset + crop_w, ...]
         return data_, crop_bbox
 
     def __call__(self, results):
@@ -306,27 +290,26 @@ class FixedCrop:
             crop_bbox = None
             for image in images:
                 # In fixed crop for paired images, sizes should be the same
-                if (image.shape[0] != data_h or image.shape[1] != data_w):
+                if image.shape[0] != data_h or image.shape[1] != data_w:
                     raise ValueError(
-                        'The sizes of paired images should be the same. '
-                        f'Expected ({data_h}, {data_w}), '
-                        f'but got ({image.shape[0]}, '
-                        f'{image.shape[1]}).')
-                data_, crop_bbox = self._crop(image, x_offset, y_offset,
-                                              crop_w, crop_h)
+                        "The sizes of paired images should be the same. "
+                        f"Expected ({data_h}, {data_w}), "
+                        f"but got ({image.shape[0]}, "
+                        f"{image.shape[1]})."
+                    )
+                data_, crop_bbox = self._crop(image, x_offset, y_offset, crop_w, crop_h)
                 cropped_images.append(data_)
-            results[k + '_crop_bbox'] = crop_bbox
+            results[k + "_crop_bbox"] = crop_bbox
             if not is_list:
                 cropped_images = cropped_images[0]
             results[k] = cropped_images
-        results['crop_size'] = self.crop_size
-        results['crop_pos'] = self.crop_pos
+        results["crop_size"] = self.crop_size
+        results["crop_pos"] = self.crop_pos
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'keys={self.keys}, crop_size={self.crop_size}, '
-                     f'crop_pos={self.crop_pos}')
+        repr_str += f"keys={self.keys}, crop_size={self.crop_size}, " f"crop_pos={self.crop_pos}"
         return repr_str
 
 
@@ -356,53 +339,50 @@ class PairedRandomCrop:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        scale = results['scale']
+        scale = results["scale"]
         lq_patch_size = self.gt_patch_size // scale
 
-        lq_is_list = isinstance(results['lq'], list)
+        lq_is_list = isinstance(results["lq"], list)
         if not lq_is_list:
-            results['lq'] = [results['lq']]
-        gt_is_list = isinstance(results['gt'], list)
+            results["lq"] = [results["lq"]]
+        gt_is_list = isinstance(results["gt"], list)
         if not gt_is_list:
-            results['gt'] = [results['gt']]
+            results["gt"] = [results["gt"]]
 
-        h_lq, w_lq, _ = results['lq'][0].shape
-        h_gt, w_gt, _ = results['gt'][0].shape
+        h_lq, w_lq, _ = results["lq"][0].shape
+        h_gt, w_gt, _ = results["gt"][0].shape
 
         if h_gt != h_lq * scale or w_gt != w_lq * scale:
             raise ValueError(
-                f'Scale mismatches. GT ({h_gt}, {w_gt}) is not {scale}x ',
-                f'multiplication of LQ ({h_lq}, {w_lq}).')
+                f"Scale mismatches. GT ({h_gt}, {w_gt}) is not {scale}x ", f"multiplication of LQ ({h_lq}, {w_lq})."
+            )
         if h_lq < lq_patch_size or w_lq < lq_patch_size:
             raise ValueError(
-                f'LQ ({h_lq}, {w_lq}) is smaller than patch size ',
-                f'({lq_patch_size}, {lq_patch_size}). Please check '
-                f'{results["lq_path"][0]} and {results["gt_path"][0]}.')
+                f"LQ ({h_lq}, {w_lq}) is smaller than patch size ",
+                f"({lq_patch_size}, {lq_patch_size}). Please check "
+                f'{results["lq_path"][0]} and {results["gt_path"][0]}.',
+            )
 
         # randomly choose top and left coordinates for lq patch
         top = np.random.randint(h_lq - lq_patch_size + 1)
         left = np.random.randint(w_lq - lq_patch_size + 1)
         # crop lq patch
-        results['lq'] = [
-            v[top:top + lq_patch_size, left:left + lq_patch_size, ...]
-            for v in results['lq']
-        ]
+        results["lq"] = [v[top : top + lq_patch_size, left : left + lq_patch_size, ...] for v in results["lq"]]
         # crop corresponding gt patch
         top_gt, left_gt = int(top * scale), int(left * scale)
-        results['gt'] = [
-            v[top_gt:top_gt + self.gt_patch_size,
-              left_gt:left_gt + self.gt_patch_size, ...] for v in results['gt']
+        results["gt"] = [
+            v[top_gt : top_gt + self.gt_patch_size, left_gt : left_gt + self.gt_patch_size, ...] for v in results["gt"]
         ]
 
         if not lq_is_list:
-            results['lq'] = results['lq'][0]
+            results["lq"] = results["lq"][0]
         if not gt_is_list:
-            results['gt'] = results['gt'][0]
+            results["gt"] = results["gt"][0]
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += f'(gt_patch_size={self.gt_patch_size})'
+        repr_str += f"(gt_patch_size={self.gt_patch_size})"
         return repr_str
 
 
@@ -425,10 +405,9 @@ class CropAroundCenter:
 
     def __init__(self, crop_size):
         if mmcv.is_tuple_of(crop_size, int):
-            assert len(crop_size) == 2, 'length of crop_size must be 2.'
+            assert len(crop_size) == 2, "length of crop_size must be 2."
         elif not isinstance(crop_size, int):
-            raise TypeError('crop_size must be int or a tuple of int, but got '
-                            f'{type(crop_size)}')
+            raise TypeError("crop_size must be int or a tuple of int, but got " f"{type(crop_size)}")
         self.crop_size = _pair(crop_size)
 
     def __call__(self, results):
@@ -441,13 +420,12 @@ class CropAroundCenter:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        fg = results['fg']
-        alpha = results['alpha']
-        trimap = results['trimap']
-        bg = results['bg']
+        fg = results["fg"]
+        alpha = results["alpha"]
+        trimap = results["trimap"]
+        bg = results["bg"]
         h, w = fg.shape[:2]
-        assert bg.shape == fg.shape, (f'shape of bg {bg.shape} should be the '
-                                      f'same as fg {fg.shape}.')
+        assert bg.shape == fg.shape, f"shape of bg {bg.shape} should be the " f"same as fg {fg.shape}."
 
         crop_h, crop_w = self.crop_size
         # Make sure h >= crop_h, w >= crop_w. If not, rescale imgs
@@ -455,21 +433,17 @@ class CropAroundCenter:
         if rescale_ratio > 1:
             new_h = max(int(h * rescale_ratio), crop_h)
             new_w = max(int(w * rescale_ratio), crop_w)
-            fg = mmcv.imresize(fg, (new_w, new_h), interpolation='nearest')
-            alpha = mmcv.imresize(
-                alpha, (new_w, new_h), interpolation='nearest')
-            trimap = mmcv.imresize(
-                trimap, (new_w, new_h), interpolation='nearest')
-            bg = mmcv.imresize(bg, (new_w, new_h), interpolation='bicubic')
+            fg = mmcv.imresize(fg, (new_w, new_h), interpolation="nearest")
+            alpha = mmcv.imresize(alpha, (new_w, new_h), interpolation="nearest")
+            trimap = mmcv.imresize(trimap, (new_w, new_h), interpolation="nearest")
+            bg = mmcv.imresize(bg, (new_w, new_h), interpolation="bicubic")
             h, w = new_h, new_w
 
         # resize to 1/4 to ignore small unknown patches
-        small_trimap = mmcv.imresize(
-            trimap, (w // 4, h // 4), interpolation='nearest')
+        small_trimap = mmcv.imresize(trimap, (w // 4, h // 4), interpolation="nearest")
         # find unknown area in center 1/4 region
         margin_h, margin_w = crop_h // 2, crop_w // 2
-        sample_area = small_trimap[margin_h // 4:(h - margin_h) // 4,
-                                   margin_w // 4:(w - margin_w) // 4]
+        sample_area = small_trimap[margin_h // 4 : (h - margin_h) // 4, margin_w // 4 : (w - margin_w) // 4]
         unknown_xs, unknown_ys = np.where(sample_area == 128)
         unknown_num = len(unknown_xs)
         if unknown_num < 10:
@@ -483,15 +457,15 @@ class CropAroundCenter:
         bottom = top + crop_h
         right = left + crop_w
 
-        results['fg'] = fg[top:bottom, left:right]
-        results['alpha'] = alpha[top:bottom, left:right]
-        results['trimap'] = trimap[top:bottom, left:right]
-        results['bg'] = bg[top:bottom, left:right]
-        results['crop_bbox'] = (left, top, right, bottom)
+        results["fg"] = fg[top:bottom, left:right]
+        results["alpha"] = alpha[top:bottom, left:right]
+        results["trimap"] = trimap[top:bottom, left:right]
+        results["bg"] = bg[top:bottom, left:right]
+        results["crop_bbox"] = (left, top, right, bottom)
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(crop_size={self.crop_size})'
+        return self.__class__.__name__ + f"(crop_size={self.crop_size})"
 
 
 @PIPELINES.register_module()
@@ -518,41 +492,34 @@ class CropAroundUnknown:
             Default to 'bilinear'.
     """
 
-    def __init__(self,
-                 keys,
-                 crop_sizes,
-                 unknown_source='alpha',
-                 interpolations='bilinear'):
-        if 'alpha' not in keys:
+    def __init__(self, keys, crop_sizes, unknown_source="alpha", interpolations="bilinear"):
+        if "alpha" not in keys:
             raise ValueError(f'"alpha" must be in keys, but got {keys}')
         self.keys = keys
 
         if not isinstance(crop_sizes, list):
-            raise TypeError(
-                f'Crop sizes must be list, but got {type(crop_sizes)}.')
+            raise TypeError(f"Crop sizes must be list, but got {type(crop_sizes)}.")
         self.crop_sizes = [_pair(crop_size) for crop_size in crop_sizes]
         if not mmcv.is_tuple_of(self.crop_sizes[0], int):
-            raise TypeError('Elements of crop_sizes must be int or tuple of '
-                            f'int, but got {type(self.crop_sizes[0][0])}.')
+            raise TypeError(
+                "Elements of crop_sizes must be int or tuple of " f"int, but got {type(self.crop_sizes[0][0])}."
+            )
 
-        if unknown_source not in ['alpha', 'trimap']:
-            raise ValueError('unknown_source must be "alpha" or "trimap", '
-                             f'but got {unknown_source}')
+        if unknown_source not in ["alpha", "trimap"]:
+            raise ValueError('unknown_source must be "alpha" or "trimap", ' f"but got {unknown_source}")
         if unknown_source not in keys:
             # it could only be trimap, since alpha is checked before
-            raise ValueError(
-                'if unknown_source is "trimap", it must also be set in keys')
+            raise ValueError('if unknown_source is "trimap", it must also be set in keys')
         self.unknown_source = unknown_source
 
         if isinstance(interpolations, str):
             self.interpolations = [interpolations] * len(self.keys)
-        elif mmcv.is_list_of(interpolations,
-                             str) and len(interpolations) == len(self.keys):
+        elif mmcv.is_list_of(interpolations, str) and len(interpolations) == len(self.keys):
             self.interpolations = interpolations
         else:
             raise TypeError(
-                'interpolations must be a str or list of str with '
-                f'the same length as keys, but got {interpolations}')
+                "interpolations must be a str or list of str with " f"the same length as keys, but got {interpolations}"
+            )
 
     def __call__(self, results):
         """Call function.
@@ -575,14 +542,13 @@ class CropAroundUnknown:
             h = max(int(h * rescale_ratio), crop_h)
             w = max(int(w * rescale_ratio), crop_w)
             for key, interpolation in zip(self.keys, self.interpolations):
-                results[key] = mmcv.imresize(
-                    results[key], (w, h), interpolation=interpolation)
+                results[key] = mmcv.imresize(results[key], (w, h), interpolation=interpolation)
 
         # Select the cropping top-left point which is an unknown pixel
-        if self.unknown_source == 'alpha':
-            unknown = (results['alpha'] > 0) & (results['alpha'] < 255)
+        if self.unknown_source == "alpha":
+            unknown = (results["alpha"] > 0) & (results["alpha"] < 255)
         else:
-            unknown = results['trimap'] == 128
+            unknown = results["trimap"] == 128
         top, left = random_choose_unknown(unknown.squeeze(), (crop_h, crop_w))
 
         bottom = top + crop_h
@@ -590,14 +556,16 @@ class CropAroundUnknown:
 
         for key in self.keys:
             results[key] = results[key][top:bottom, left:right]
-        results['crop_bbox'] = (left, top, right, bottom)
+        results["crop_bbox"] = (left, top, right, bottom)
         return results
 
     def __repr__(self):
         repr_str = self.__class__.__name__
-        repr_str += (f'(keys={self.keys}, crop_sizes={self.crop_sizes}, '
-                     f"unknown_source='{self.unknown_source}', "
-                     f'interpolations={self.interpolations})')
+        repr_str += (
+            f"(keys={self.keys}, crop_sizes={self.crop_sizes}, "
+            f"unknown_source='{self.unknown_source}', "
+            f"interpolations={self.interpolations})"
+        )
         return repr_str
 
 
@@ -622,12 +590,10 @@ class CropAroundFg:
     """
 
     def __init__(self, keys, bd_ratio_range=(0.1, 0.4), test_mode=False):
-        if 'seg' not in keys:
+        if "seg" not in keys:
             raise ValueError(f'"seg" must be in keys, but got {keys}')
-        if (not mmcv.is_tuple_of(bd_ratio_range, float)
-                or len(bd_ratio_range) != 2):
-            raise TypeError('bd_ratio_range must be a tuple of 2 int, but got '
-                            f'{bd_ratio_range}')
+        if not mmcv.is_tuple_of(bd_ratio_range, float) or len(bd_ratio_range) != 2:
+            raise TypeError("bd_ratio_range must be a tuple of 2 int, but got " f"{bd_ratio_range}")
         self.keys = keys
         self.bd_ratio_range = bd_ratio_range
         self.test_mode = test_mode
@@ -642,7 +608,7 @@ class CropAroundFg:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        seg = results['seg']
+        seg = results["seg"]
         height, width = seg.shape[:2]
 
         # get foreground bbox
@@ -668,7 +634,7 @@ class CropAroundFg:
 
         for key in self.keys:
             results[key] = results[key][top:bottom, left:right]
-        results['crop_bbox'] = (left, top, right, bottom)
+        results["crop_bbox"] = (left, top, right, bottom)
         return results
 
 
@@ -690,15 +656,15 @@ class ModCrop:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        img = results['gt'].copy()
-        scale = results['scale']
+        img = results["gt"].copy()
+        scale = results["scale"]
         if img.ndim in [2, 3]:
             h, w = img.shape[0], img.shape[1]
             h_remainder, w_remainder = h % scale, w % scale
-            img = img[:h - h_remainder, :w - w_remainder, ...]
+            img = img[: h - h_remainder, : w - w_remainder, ...]
         else:
-            raise ValueError(f'Wrong img ndim: {img.ndim}.')
-        results['gt'] = img
+            raise ValueError(f"Wrong img ndim: {img.ndim}.")
+        results["gt"] = img
         return results
 
 
@@ -745,5 +711,4 @@ class CropLike:
         return results
 
     def __repr__(self):
-        return (self.__class__.__name__ + f' target_key={self.target_key}, ' +
-                f'reference_key={self.reference_key}')
+        return self.__class__.__name__ + f" target_key={self.target_key}, " + f"reference_key={self.reference_key}"

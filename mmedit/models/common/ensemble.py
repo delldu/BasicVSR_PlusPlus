@@ -4,7 +4,7 @@ import torch.nn as nn
 
 
 class SpatialTemporalEnsemble(nn.Module):
-    """ Apply spatial and temporal ensemble and compute outputs
+    """Apply spatial and temporal ensemble and compute outputs
 
     Args:
         is_temporal_ensemble (bool, optional): Whether to apply ensemble
@@ -37,16 +37,15 @@ class SpatialTemporalEnsemble(nn.Module):
         is_single_image = False
         if imgs.ndim == 4:
             if self.is_temporal_ensemble:
-                raise ValueError('"is_temporal_ensemble" must be False if '
-                                 'the input is an image.')
+                raise ValueError('"is_temporal_ensemble" must be False if ' "the input is an image.")
             is_single_image = True
             imgs = imgs.unsqueeze(1)
 
-        if mode == 'vertical':
+        if mode == "vertical":
             imgs = imgs.flip(4).clone()
-        elif mode == 'horizontal':
+        elif mode == "horizontal":
             imgs = imgs.flip(3).clone()
-        elif mode == 'transpose':
+        elif mode == "transpose":
             imgs = imgs.permute(0, 1, 2, 4, 3).clone()
 
         if is_single_image:
@@ -68,17 +67,17 @@ class SpatialTemporalEnsemble(nn.Module):
         """
 
         img_list = [imgs.cpu()]
-        for mode in ['vertical', 'horizontal', 'transpose']:
+        for mode in ["vertical", "horizontal", "transpose"]:
             img_list.extend([self._transform(t, mode) for t in img_list])
 
         output_list = [model(t.to(imgs.device)).cpu() for t in img_list]
         for i in range(len(output_list)):
             if i > 3:
-                output_list[i] = self._transform(output_list[i], 'transpose')
+                output_list[i] = self._transform(output_list[i], "transpose")
             if i % 4 > 1:
-                output_list[i] = self._transform(output_list[i], 'horizontal')
+                output_list[i] = self._transform(output_list[i], "horizontal")
             if (i % 4) % 2 == 1:
-                output_list[i] = self._transform(output_list[i], 'vertical')
+                output_list[i] = self._transform(output_list[i], "vertical")
 
         outputs = torch.stack(output_list, dim=0)
         outputs = outputs.mean(dim=0, keepdim=False)

@@ -27,7 +27,7 @@ def to_tensor(data):
     if isinstance(data, float):
         return torch.FloatTensor([data])
 
-    raise TypeError(f'type {type(data)} cannot be converted to tensor.')
+    raise TypeError(f"type {type(data)} cannot be converted to tensor.")
 
 
 @PIPELINES.register_module()
@@ -57,7 +57,7 @@ class ToTensor:
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(keys={self.keys})'
+        return self.__class__.__name__ + f"(keys={self.keys})"
 
 
 @PIPELINES.register_module()
@@ -94,8 +94,7 @@ class ImageToTensor:
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + (
-            f'(keys={self.keys}, to_float32={self.to_float32})')
+        return self.__class__.__name__ + (f"(keys={self.keys}, to_float32={self.to_float32})")
 
 
 @PIPELINES.register_module()
@@ -123,8 +122,7 @@ class FramesToTensor(ImageToTensor):
         """
         for key in self.keys:
             if not isinstance(results[key], list):
-                raise TypeError(f'results["{key}"] should be a list, '
-                                f'but got {type(results[key])}')
+                raise TypeError(f'results["{key}"] should be a list, ' f"but got {type(results[key])}")
             for idx, v in enumerate(results[key]):
                 # deal with gray scale img: expand a color channel
                 if len(v.shape) == 2:
@@ -149,7 +147,7 @@ class GetMaskedImage:
             regions.
     """
 
-    def __init__(self, img_name='gt_img', mask_name='mask'):
+    def __init__(self, img_name="gt_img", mask_name="mask"):
         self.img_name = img_name
         self.mask_name = mask_name
 
@@ -166,14 +164,13 @@ class GetMaskedImage:
         clean_img = results[self.img_name]
         mask = results[self.mask_name]
 
-        masked_img = clean_img * (1. - mask)
-        results['masked_img'] = masked_img
+        masked_img = clean_img * (1.0 - mask)
+        results["masked_img"] = masked_img
 
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + (
-            f"(img_name='{self.img_name}', mask_name='{self.mask_name}')")
+        return self.__class__.__name__ + (f"(img_name='{self.img_name}', mask_name='{self.mask_name}')")
 
 
 @PIPELINES.register_module()
@@ -203,7 +200,7 @@ class FormatTrimap:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        trimap = results['trimap'].squeeze()
+        trimap = results["trimap"].squeeze()
         trimap[trimap == 128] = 1
         trimap[trimap == 255] = 2
         if self.to_onehot:
@@ -211,12 +208,12 @@ class FormatTrimap:
             trimap = trimap.permute(2, 0, 1)
         else:
             trimap = trimap[None, ...]  # expand the channels dimension
-        results['trimap'] = trimap.float()
-        results['meta'].data['to_onehot'] = self.to_onehot
+        results["trimap"] = trimap.float()
+        results["meta"].data["to_onehot"] = self.to_onehot
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(to_onehot={self.to_onehot})'
+        return self.__class__.__name__ + f"(to_onehot={self.to_onehot})"
 
 
 @PIPELINES.register_module()
@@ -253,11 +250,10 @@ class Collect:
         img_meta = {}
         for key in self.meta_keys:
             img_meta[key] = results[key]
-        data['meta'] = DC(img_meta, cpu_only=True)
+        data["meta"] = DC(img_meta, cpu_only=True)
         for key in self.keys:
             data[key] = results[key]
         return data
 
     def __repr__(self):
-        return self.__class__.__name__ + (
-            f'(keys={self.keys}, meta_keys={self.meta_keys})')
+        return self.__class__.__name__ + (f"(keys={self.keys}, meta_keys={self.meta_keys})")

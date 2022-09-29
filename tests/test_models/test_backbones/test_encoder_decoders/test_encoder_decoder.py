@@ -12,7 +12,7 @@ def assert_dict_keys_equal(dictionary, target_keys):
 
 
 def assert_tensor_with_shape(tensor, shape):
-    """"Check if the shape of the tensor is equal to the target shape."""
+    """ "Check if the shape of the tensor is equal to the target shape."""
     assert isinstance(tensor, torch.Tensor)
     assert tensor.shape == shape
 
@@ -20,8 +20,8 @@ def assert_tensor_with_shape(tensor, shape):
 def test_encoder_decoder():
     """Test SimpleEncoderDecoder."""
     # check DIM with only alpha loss
-    encoder = dict(type='VGG16', in_channels=4)
-    decoder = dict(type='PlainDecoder')
+    encoder = dict(type="VGG16", in_channels=4)
+    decoder = dict(type="PlainDecoder")
 
     model = SimpleEncoderDecoder(encoder, decoder)
     model.init_weights()
@@ -31,8 +31,8 @@ def test_encoder_decoder():
     assert_tensor_with_shape(prediction, torch.Size([1, 1, 64, 64]))
 
     # check DIM with only composition loss
-    encoder = dict(type='VGG16', in_channels=4)
-    decoder = dict(type='PlainDecoder')
+    encoder = dict(type="VGG16", in_channels=4)
+    decoder = dict(type="PlainDecoder")
 
     model = SimpleEncoderDecoder(encoder, decoder)
     model.init_weights()
@@ -42,8 +42,8 @@ def test_encoder_decoder():
     assert_tensor_with_shape(prediction, torch.Size([1, 1, 64, 64]))
 
     # check DIM with both alpha and composition loss
-    encoder = dict(type='VGG16', in_channels=4)
-    decoder = dict(type='PlainDecoder')
+    encoder = dict(type="VGG16", in_channels=4)
+    decoder = dict(type="PlainDecoder")
     model = SimpleEncoderDecoder(encoder, decoder)
     model.init_weights()
     model.train()
@@ -53,8 +53,8 @@ def test_encoder_decoder():
 
     # test forward with gpu
     if torch.cuda.is_available():
-        encoder = dict(type='VGG16', in_channels=4)
-        decoder = dict(type='PlainDecoder')
+        encoder = dict(type="VGG16", in_channels=4)
+        decoder = dict(type="PlainDecoder")
 
         model = SimpleEncoderDecoder(encoder, decoder)
         model.init_weights()

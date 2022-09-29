@@ -37,18 +37,20 @@ class ContextualAttentionModule(nn.Module):
             returned. Default: True.
     """
 
-    def __init__(self,
-                 unfold_raw_kernel_size=4,
-                 unfold_raw_stride=2,
-                 unfold_raw_padding=1,
-                 unfold_corr_kernel_size=3,
-                 unfold_corr_stride=1,
-                 unfold_corr_dilation=1,
-                 unfold_corr_padding=1,
-                 scale=0.5,
-                 fuse_kernel_size=3,
-                 softmax_scale=10,
-                 return_attention_score=True):
+    def __init__(
+        self,
+        unfold_raw_kernel_size=4,
+        unfold_raw_stride=2,
+        unfold_raw_padding=1,
+        unfold_corr_kernel_size=3,
+        unfold_corr_stride=1,
+        unfold_corr_dilation=1,
+        unfold_corr_padding=1,
+        scale=0.5,
+        fuse_kernel_size=3,
+        softmax_scale=10,
+        return_attention_score=True,
+    ):
         super().__init__()
         self.unfold_raw_kernel_size = unfold_raw_kernel_size
         self.unfold_raw_stride = unfold_raw_stride
@@ -65,9 +67,8 @@ class ContextualAttentionModule(nn.Module):
 
         if self.with_fuse_correlation:
             assert fuse_kernel_size % 2 == 1
-            fuse_kernel = torch.eye(fuse_kernel_size).view(
-                1, 1, fuse_kernel_size, fuse_kernel_size)
-            self.register_buffer('fuse_kernel', fuse_kernel)
+            fuse_kernel = torch.eye(fuse_kernel_size).view(1, 1, fuse_kernel_size, fuse_kernel_size)
+            self.register_buffer("fuse_kernel", fuse_kernel)
             padding = int((fuse_kernel_size - 1) // 2)
             self.fuse_conv = partial(F.conv2d, padding=padding, stride=1)
         self.softmax = nn.Softmax(dim=1)
@@ -91,7 +92,8 @@ class ContextualAttentionModule(nn.Module):
             stride=self.unfold_raw_stride,
             padding=self.unfold_raw_padding,
             normalize=False,
-            return_cols=True)
+            return_cols=True,
+        )
         # resize the feature to reduce computational cost
         x = F.interpolate(x, scale_factor=self.scale)
         context = F.interpolate(context, scale_factor=self.scale)
@@ -103,7 +105,8 @@ class ContextualAttentionModule(nn.Module):
             padding=self.unfold_corr_padding,
             dilation=self.unfold_corr_dilation,
             normalize=True,
-            return_cols=True)
+            return_cols=True,
+        )
         h_unfold, w_unfold = self.calculate_unfold_hw(
             context.size()[-2:],
             kernel_size=self.unfold_corr_kernel_size,
@@ -121,15 +124,13 @@ class ContextualAttentionModule(nn.Module):
         correlation_map = self.patch_correlation(x, context_cols)
         # fuse correlation map to enlarge consistent attention region.
         if self.with_fuse_correlation:
-            correlation_map = self.fuse_correlation_map(
-                correlation_map, h_unfold, w_unfold)
+            correlation_map = self.fuse_correlation_map(correlation_map, h_unfold, w_unfold)
 
         correlation_map = self.mask_correlation_map(correlation_map, mask=mask)
 
         attention_score = self.softmax(correlation_map * self.softmax_scale)
 
-        raw_context_filter = raw_context_cols.reshape(
-            -1, *raw_context_cols.shape[2:])
+        raw_context_filter = raw_context_cols.reshape(-1, *raw_context_cols.shape[2:])
         output = self.patch_copy_deconv(attention_score, raw_context_filter)
         # deconv will cause overlap and we need to remove the effects of that
         overlap_factor = self.calculate_overlap_factor(attention_score)
@@ -137,8 +138,7 @@ class ContextualAttentionModule(nn.Module):
 
         if self.return_attention_score:
             n, _, h_s, w_s = attention_score.size()
-            attention_score = attention_score.view(n, h_unfold, w_unfold, h_s,
-                                                   w_s)
+            attention_score = attention_score.view(n, h_unfold, w_unfold, h_s, w_s)
             return output, attention_score
 
         return output
@@ -161,7 +161,8 @@ class ContextualAttentionModule(nn.Module):
             stride=self.unfold_corr_stride,
             padding=self.unfold_corr_padding,
             dilation=self.unfold_corr_dilation,
-            groups=n)
+            groups=n,
+        )
         h_out, w_out = patch_corr.size()[-2:]
         return patch_corr.view(n, -1, h_out, w_out)
 
@@ -178,11 +179,8 @@ class ContextualAttentionModule(nn.Module):
         n, _, h, w = attention_score.size()
         attention_score = attention_score.view(1, -1, h, w)
         output = F.conv_transpose2d(
-            attention_score,
-            context_filter,
-            stride=self.unfold_raw_stride,
-            padding=self.unfold_raw_padding,
-            groups=n)
+            attention_score, context_filter, stride=self.unfold_raw_stride, padding=self.unfold_raw_padding, groups=n
+        )
         h_out, w_out = output.size()[-2:]
         return output.view(n, -1, h_out, w_out)
 
@@ -223,25 +221,17 @@ class ContextualAttentionModule(nn.Module):
         correlation_map = map_.view(n, h_unfold, w_unfold, h_map, w_map)
 
         # vertical direction
-        map_ = correlation_map.permute(0, 2, 1, 4,
-                                       3).reshape(n, 1, h_unfold * w_unfold,
-                                                  h_map * w_map)
+        map_ = correlation_map.permute(0, 2, 1, 4, 3).reshape(n, 1, h_unfold * w_unfold, h_map * w_map)
         map_ = self.fuse_conv(map_, self.fuse_kernel)
 
         # Note that the dimension should be transposed since the convolution of
         # eye matrix will put the normed scores into the last several dimension
-        correlation_map = map_.view(n, w_unfold, h_unfold, w_map,
-                                    h_map).permute(0, 4, 3, 2, 1)
+        correlation_map = map_.view(n, w_unfold, h_unfold, w_map, h_map).permute(0, 4, 3, 2, 1)
         correlation_map = correlation_map.reshape(n, -1, h_unfold, w_unfold)
 
         return correlation_map
 
-    def calculate_unfold_hw(self,
-                            input_size,
-                            kernel_size=3,
-                            stride=1,
-                            dilation=1,
-                            padding=0):
+    def calculate_unfold_hw(self, input_size, kernel_size=3, stride=1, dilation=1, padding=0):
         """Calculate (h, w) after unfolding
 
         The official implementation of `unfold` in pytorch will put the
@@ -251,11 +241,9 @@ class ContextualAttentionModule(nn.Module):
         """
         h_in, w_in = input_size
 
-        h_unfold = int((h_in + 2 * padding - dilation *
-                        (kernel_size - 1) - 1) / stride + 1)
+        h_unfold = int((h_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
 
-        w_unfold = int((w_in + 2 * padding - dilation *
-                        (kernel_size - 1) - 1) / stride + 1)
+        w_unfold = int((w_in + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
         return h_unfold, w_unfold
 
     def calculate_overlap_factor(self, attention_score):
@@ -272,16 +260,13 @@ class ContextualAttentionModule(nn.Module):
         kernel_size = self.unfold_raw_kernel_size
 
         ones_input = torch.ones(1, 1, h, w).to(attention_score)
-        ones_filter = torch.ones(1, 1, kernel_size,
-                                 kernel_size).to(attention_score)
+        ones_filter = torch.ones(1, 1, kernel_size, kernel_size).to(attention_score)
         overlap = F.conv_transpose2d(
-            ones_input,
-            ones_filter,
-            stride=self.unfold_raw_stride,
-            padding=self.unfold_raw_padding)
+            ones_input, ones_filter, stride=self.unfold_raw_stride, padding=self.unfold_raw_padding
+        )
 
         # avoid division by zero
-        overlap[overlap == 0] = 1.
+        overlap[overlap == 0] = 1.0
         return overlap
 
     def mask_correlation_map(self, correlation_map, mask):
@@ -309,23 +294,16 @@ class ContextualAttentionModule(nn.Module):
                 kernel_size=self.unfold_corr_kernel_size,
                 stride=self.unfold_corr_stride,
                 padding=self.unfold_corr_padding,
-                dilation=self.unfold_corr_dilation)
+                dilation=self.unfold_corr_dilation,
+            )
             mask_cols = (mask_cols.sum(dim=1, keepdim=True) > 0).float()
-            mask_cols = mask_cols.permute(0, 2,
-                                          1).reshape(mask.size(0), -1, 1, 1)
+            mask_cols = mask_cols.permute(0, 2, 1).reshape(mask.size(0), -1, 1, 1)
             # add negative inf will bring zero in softmax
-            mask_cols[mask_cols == 1] = -float('inf')
+            mask_cols[mask_cols == 1] = -float("inf")
             correlation_map += mask_cols
         return correlation_map
 
-    def im2col(self,
-               img,
-               kernel_size,
-               stride=1,
-               padding=0,
-               dilation=1,
-               normalize=False,
-               return_cols=False):
+    def im2col(self, img, kernel_size, stride=1, padding=0, dilation=1, normalize=False, return_cols=False):
         """Reshape image-style feature to columns.
 
         This function is used for unfold feature maps to columns. The
@@ -357,23 +335,17 @@ class ContextualAttentionModule(nn.Module):
         """
 
         # unfold img to columns with shape (n, c*kernel_size**2, num_cols)
-        img_unfold = F.unfold(
-            img,
-            kernel_size,
-            stride=stride,
-            padding=padding,
-            dilation=dilation)
+        img_unfold = F.unfold(img, kernel_size, stride=stride, padding=padding, dilation=dilation)
         # normalize the feature map
         if normalize:
-            norm = torch.sqrt((img_unfold**2).sum(dim=1, keepdim=True))
+            norm = torch.sqrt((img_unfold ** 2).sum(dim=1, keepdim=True))
             eps = torch.tensor([1e-4]).to(img)
             img_unfold = img_unfold / torch.max(norm, eps)
 
         if return_cols:
             img_unfold_ = img_unfold.permute(0, 2, 1)
             n, num_cols = img_unfold_.size()[:2]
-            img_cols = img_unfold_.view(n, num_cols, img.size(1), kernel_size,
-                                        kernel_size)
+            img_cols = img_unfold_.view(n, num_cols, img.size(1), kernel_size, kernel_size)
             return img_cols
 
         return img_unfold

@@ -48,15 +48,13 @@ def random_bbox(img_shape, max_bbox_shape, max_bbox_delta=40, min_margin=20):
     margin_h, margin_w = min_margin
 
     if max_mask_h > img_h or max_mask_w > img_w:
-        raise ValueError(f'mask shape {max_bbox_shape} should be smaller than '
-                         f'image shape {img_shape}')
-    if (max_delta_h // 2 * 2 >= max_mask_h
-            or max_delta_w // 2 * 2 >= max_mask_w):
-        raise ValueError(f'mask delta {max_bbox_delta} should be smaller than'
-                         f'mask shape {max_bbox_shape}')
+        raise ValueError(f"mask shape {max_bbox_shape} should be smaller than " f"image shape {img_shape}")
+    if max_delta_h // 2 * 2 >= max_mask_h or max_delta_w // 2 * 2 >= max_mask_w:
+        raise ValueError(f"mask delta {max_bbox_delta} should be smaller than" f"mask shape {max_bbox_shape}")
     if img_h - max_mask_h < 2 * margin_h or img_w - max_mask_w < 2 * margin_w:
-        raise ValueError(f'Margin {min_margin} cannot be satisfied for img'
-                         f'shape {img_shape} and mask shape {max_bbox_shape}')
+        raise ValueError(
+            f"Margin {min_margin} cannot be satisfied for img" f"shape {img_shape} and mask shape {max_bbox_shape}"
+        )
 
     # get the max value of (top, left)
     max_top = img_h - margin_h - max_mask_h
@@ -75,7 +73,7 @@ def random_bbox(img_shape, max_bbox_shape, max_bbox_delta=40, min_margin=20):
     return (top, left, h, w)
 
 
-def bbox2mask(img_shape, bbox, dtype='uint8'):
+def bbox2mask(img_shape, bbox, dtype="uint8"):
     """Generate mask in ndarray from bbox.
 
     The returned mask has the shape of (h, w, 1). '1' indicates the
@@ -96,18 +94,20 @@ def bbox2mask(img_shape, bbox, dtype='uint8'):
     height, width = img_shape[:2]
 
     mask = np.zeros((height, width, 1), dtype=dtype)
-    mask[bbox[0]:bbox[0] + bbox[2], bbox[1]:bbox[1] + bbox[3], :] = 1
+    mask[bbox[0] : bbox[0] + bbox[2], bbox[1] : bbox[1] + bbox[3], :] = 1
 
     return mask
 
 
-def brush_stroke_mask(img_shape,
-                      num_vertices=(4, 12),
-                      mean_angle=2 * math.pi / 5,
-                      angle_range=2 * math.pi / 15,
-                      brush_width=(12, 40),
-                      max_loops=4,
-                      dtype='uint8'):
+def brush_stroke_mask(
+    img_shape,
+    num_vertices=(4, 12),
+    mean_angle=2 * math.pi / 5,
+    angle_range=2 * math.pi / 15,
+    brush_width=(12, 40),
+    max_loops=4,
+    dtype="uint8",
+):
     """Generate free-form mask.
 
     The method of generating free-form mask is in the following paper:
@@ -146,23 +146,20 @@ def brush_stroke_mask(img_shape,
     elif isinstance(num_vertices, tuple):
         min_num_vertices, max_num_vertices = num_vertices
     else:
-        raise TypeError('The type of num_vertices should be int'
-                        f'or tuple[int], but got type: {num_vertices}')
+        raise TypeError("The type of num_vertices should be int" f"or tuple[int], but got type: {num_vertices}")
 
     if isinstance(brush_width, tuple):
         min_width, max_width = brush_width
     elif isinstance(brush_width, int):
         min_width, max_width = brush_width, brush_width + 1
     else:
-        raise TypeError('The type of brush_width should be int'
-                        f'or tuple[int], but got type: {brush_width}')
+        raise TypeError("The type of brush_width should be int" f"or tuple[int], but got type: {brush_width}")
 
     average_radius = math.sqrt(img_h * img_h + img_w * img_w) / 8
-    mask = Image.new('L', (img_w, img_h), 0)
+    mask = Image.new("L", (img_w, img_h), 0)
 
     loop_num = np.random.randint(1, max_loops)
-    num_vertex_list = np.random.randint(
-        min_num_vertices, max_num_vertices, size=loop_num)
+    num_vertex_list = np.random.randint(min_num_vertices, max_num_vertices, size=loop_num)
     angle_min_list = np.random.uniform(0, angle_range, size=loop_num)
     angle_max_list = np.random.uniform(0, angle_range, size=loop_num)
 
@@ -182,8 +179,7 @@ def brush_stroke_mask(img_shape,
 
         # set random vertices
         vertex.append((np.random.randint(0, w), np.random.randint(0, h)))
-        r_list = np.random.normal(
-            loc=average_radius, scale=average_radius // 2, size=num_vertex)
+        r_list = np.random.normal(loc=average_radius, scale=average_radius // 2, size=num_vertex)
         for i in range(num_vertex):
             r = np.clip(r_list[i], 0, 2 * average_radius)
             new_x = np.clip(vertex[-1][0] + r * math.cos(angles[i]), 0, w)
@@ -194,9 +190,7 @@ def brush_stroke_mask(img_shape,
         width = np.random.randint(min_width, max_width)
         draw.line(vertex, fill=1, width=width)
         for v in vertex:
-            draw.ellipse((v[0] - width // 2, v[1] - width // 2,
-                          v[0] + width // 2, v[1] + width // 2),
-                         fill=1)
+            draw.ellipse((v[0] - width // 2, v[1] - width // 2, v[0] + width // 2, v[1] + width // 2), fill=1)
     # randomly flip the mask
     if np.random.normal() > 0:
         mask.transpose(Image.FLIP_LEFT_RIGHT)
@@ -207,12 +201,9 @@ def brush_stroke_mask(img_shape,
     return mask
 
 
-def random_irregular_mask(img_shape,
-                          num_vertices=(4, 8),
-                          max_angle=4,
-                          length_range=(10, 100),
-                          brush_width=(10, 40),
-                          dtype='uint8'):
+def random_irregular_mask(
+    img_shape, num_vertices=(4, 8), max_angle=4, length_range=(10, 100), brush_width=(10, 40), dtype="uint8"
+):
     """Generate random irregular masks.
 
     This is a modified version of free-form mask implemented in
@@ -247,23 +238,20 @@ def random_irregular_mask(img_shape,
     elif isinstance(length_range, tuple):
         min_length, max_length = length_range
     else:
-        raise TypeError('The type of length_range should be int'
-                        f'or tuple[int], but got type: {length_range}')
+        raise TypeError("The type of length_range should be int" f"or tuple[int], but got type: {length_range}")
     if isinstance(num_vertices, int):
         min_num_vertices, max_num_vertices = num_vertices, num_vertices + 1
     elif isinstance(num_vertices, tuple):
         min_num_vertices, max_num_vertices = num_vertices
     else:
-        raise TypeError('The type of num_vertices should be int'
-                        f'or tuple[int], but got type: {num_vertices}')
+        raise TypeError("The type of num_vertices should be int" f"or tuple[int], but got type: {num_vertices}")
 
     if isinstance(brush_width, int):
         min_brush_width, max_brush_width = brush_width, brush_width + 1
     elif isinstance(brush_width, tuple):
         min_brush_width, max_brush_width = brush_width
     else:
-        raise TypeError('The type of brush_width should be int'
-                        f'or tuple[int], but got type: {brush_width}')
+        raise TypeError("The type of brush_width should be int" f"or tuple[int], but got type: {brush_width}")
 
     num_v = np.random.randint(min_num_vertices, max_num_vertices)
 
@@ -273,10 +261,8 @@ def random_irregular_mask(img_shape,
         # from the start point, randomly setlect n \in [1, 6] directions.
         direction_num = np.random.randint(1, 6)
         angle_list = np.random.randint(0, max_angle, size=direction_num)
-        length_list = np.random.randint(
-            min_length, max_length, size=direction_num)
-        brush_width_list = np.random.randint(
-            min_brush_width, max_brush_width, size=direction_num)
+        length_list = np.random.randint(min_length, max_length, size=direction_num)
+        brush_width_list = np.random.randint(min_brush_width, max_brush_width, size=direction_num)
         for direct_n in range(direction_num):
             angle = 0.01 + angle_list[direct_n]
             if i % 2 == 0:
@@ -309,8 +295,7 @@ def get_irregular_mask(img_shape, area_ratio_range=(0.15, 0.5), **kwargs):
     mask = random_irregular_mask(img_shape, **kwargs)
     min_ratio, max_ratio = area_ratio_range
 
-    while not min_ratio < (np.sum(mask) /
-                           (img_shape[0] * img_shape[1])) < max_ratio:
+    while not min_ratio < (np.sum(mask) / (img_shape[0] * img_shape[1])) < max_ratio:
         mask = random_irregular_mask(img_shape, **kwargs)
 
     return mask

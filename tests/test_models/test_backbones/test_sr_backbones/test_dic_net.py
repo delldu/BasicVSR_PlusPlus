@@ -5,7 +5,10 @@ import torch.nn as nn
 
 from mmedit.models import build_backbone
 from mmedit.models.backbones.sr_backbones.dic_net import (
-    FeedbackBlock, FeedbackBlockCustom, FeedbackBlockHeatmapAttention)
+    FeedbackBlock,
+    FeedbackBlockCustom,
+    FeedbackBlockHeatmapAttention,
+)
 
 
 def test_feedback_block():
@@ -40,7 +43,7 @@ def test_feedback_block_heatmap_attention():
 def test_dic_net():
 
     model_cfg = dict(
-        type='DICNet',
+        type="DICNet",
         in_channels=3,
         out_channels=3,
         mid_channels=48,
@@ -49,13 +52,14 @@ def test_dic_net():
         hg_num_keypoints=68,
         num_steps=4,
         upscale_factor=8,
-        detach_attention=False)
+        detach_attention=False,
+    )
 
     # build model
     model = build_backbone(model_cfg)
 
     # test attributes
-    assert model.__class__.__name__ == 'DICNet'
+    assert model.__class__.__name__ == "DICNet"
 
     # prepare data
     inputs = torch.rand(1, 3, 16, 16)
@@ -93,6 +97,6 @@ def test_dic_net():
         assert output[-1].shape == targets.shape
 
     with pytest.raises(OSError):
-        model.init_weights('')
+        model.init_weights("")
     with pytest.raises(TypeError):
         model.init_weights(1)

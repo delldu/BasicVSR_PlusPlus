@@ -38,14 +38,7 @@ class SRVimeo90KMultipleGTDataset(BaseSRDataset):
             Default: `False`.
     """
 
-    def __init__(self,
-                 lq_folder,
-                 gt_folder,
-                 ann_file,
-                 pipeline,
-                 scale,
-                 num_input_frames=7,
-                 test_mode=False):
+    def __init__(self, lq_folder, gt_folder, ann_file, pipeline, scale, num_input_frames=7, test_mode=False):
         super().__init__(pipeline, scale, test_mode)
 
         self.lq_folder = str(lq_folder)
@@ -62,22 +55,15 @@ class SRVimeo90KMultipleGTDataset(BaseSRDataset):
             list[dict]: A list of dicts for paired paths and other information.
         """
         # get keys
-        with open(self.ann_file, 'r') as fin:
-            keys = [line.strip().split(' ')[0] for line in fin]
+        with open(self.ann_file, "r") as fin:
+            keys = [line.strip().split(" ")[0] for line in fin]
 
         data_infos = []
         for key in keys:
-            key = key.replace('/', os.sep)
-            lq_paths = [
-                osp.join(self.lq_folder, key, f'im{i}.png')
-                for i in range(1, self.num_input_frames + 1)
-            ]
-            gt_paths = [
-                osp.join(self.gt_folder, key, f'im{i}.png')
-                for i in range(1, self.num_input_frames + 1)
-            ]
+            key = key.replace("/", os.sep)
+            lq_paths = [osp.join(self.lq_folder, key, f"im{i}.png") for i in range(1, self.num_input_frames + 1)]
+            gt_paths = [osp.join(self.gt_folder, key, f"im{i}.png") for i in range(1, self.num_input_frames + 1)]
 
-            data_infos.append(
-                dict(lq_path=lq_paths, gt_path=gt_paths, key=key))
+            data_infos.append(dict(lq_path=lq_paths, gt_path=gt_paths, key=key))
 
         return data_infos

@@ -9,7 +9,7 @@ from mmedit.models.common import SimpleGatedConvModule
 
 def test_gl_encdec():
     input_x = torch.randn(1, 4, 256, 256)
-    template_cfg = dict(type='GLEncoderDecoder')
+    template_cfg = dict(type="GLEncoderDecoder")
 
     gl_encdec = build_backbone(template_cfg)
     gl_encdec.init_weights()
@@ -17,14 +17,14 @@ def test_gl_encdec():
     assert output.shape == (1, 3, 256, 256)
 
     cfg_ = template_cfg.copy()
-    cfg_['decoder'] = dict(type='GLDecoder', out_act='sigmoid')
+    cfg_["decoder"] = dict(type="GLDecoder", out_act="sigmoid")
     gl_encdec = build_backbone(cfg_)
     output = gl_encdec(input_x)
     assert output.shape == (1, 3, 256, 256)
 
     with pytest.raises(ValueError):
         cfg_ = template_cfg.copy()
-        cfg_['decoder'] = dict(type='GLDecoder', out_act='igccc')
+        cfg_["decoder"] = dict(type="GLDecoder", out_act="igccc")
         gl_encdec = build_backbone(cfg_)
 
     with pytest.raises(TypeError):
@@ -50,7 +50,7 @@ def test_gl_dilation_neck():
         res = neck(x)
         assert res.shape == (2, 8, 64, 64)
 
-        neck = GLDilationNeck(in_channels=8, conv_type='gated_conv').cuda()
+        neck = GLDilationNeck(in_channels=8, conv_type="gated_conv").cuda()
         res = neck(x)
         assert isinstance(neck.dilation_convs[0], SimpleGatedConvModule)
         assert res.shape == (2, 8, 64, 64)
@@ -63,18 +63,17 @@ def test_gl_discs():
         fc_in_channels=512 * 4 * 4,
         fc_out_channels=1024,
         num_convs=6,
-        norm_cfg=dict(type='BN'))
+        norm_cfg=dict(type="BN"),
+    )
     local_disc_cfg = dict(
         in_channels=3,
         max_channels=512,
         fc_in_channels=512 * 4 * 4,
         fc_out_channels=1024,
         num_convs=5,
-        norm_cfg=dict(type='BN'))
-    gl_disc_cfg = dict(
-        type='GLDiscs',
-        global_disc_cfg=global_disc_cfg,
-        local_disc_cfg=local_disc_cfg)
+        norm_cfg=dict(type="BN"),
+    )
+    gl_disc_cfg = dict(type="GLDiscs", global_disc_cfg=global_disc_cfg, local_disc_cfg=local_disc_cfg)
     gl_discs = build_component(gl_disc_cfg)
     gl_discs.init_weights()
 
