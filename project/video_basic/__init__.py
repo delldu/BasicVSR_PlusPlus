@@ -23,38 +23,28 @@ from . import basic
 import pdb
 
 
-def video_forward(model, lq, device, scale=1, batch_size=10):
-    batch_overlap_size = 2
+def video_forward(model, input_tensor, device, scale=1, batch_size=10):
+    B, C, H, W = input_tensor.size()  # (100, 3, 180, 320)
 
-    B, C, H, W = lq.size()  # (100, 3, 180, 320)
+    output_tensor = torch.zeros(B, C, H * scale, W * scale)
 
-    stride = batch_size - batch_overlap_size  # 12 - 2 == 10
-    d_list = list(range(0, B - batch_size, stride)) + [max(0, B - batch_size)]
-    # d_list -- [0, 10, 20, 30, 40, 50, 60, 70, 80, 88]
-
-    E = torch.zeros(B, C, H * scale, W * scale)
-    W = torch.zeros(B, 1, 1, 1)
-
+    d_list = list(range(0, B, batch_size))
     progress_bar = tqdm(total=len(d_list))
     for i in d_list:
         progress_bar.update(1)
 
-        lq_clip = lq[i : i + batch_size, :, :]
+        input_tensor_clip = input_tensor[i : i + batch_size, :, :]
 
         out_clip = todos.model.video_tile_forward(
-            model, device, lq_clip, h_tile_size=512, w_tile_size=512, overlap_size=20, scale=scale
+            model, device, input_tensor_clip, h_tile_size=512, w_tile_size=512, overlap_size=20, scale=scale
         )
 
-        out_clip_mask = torch.ones(min(batch_size, B), 1, 1, 1)
+        output_tensor[i : i + batch_size, :, :, :] = out_clip
 
-        E[i : i + batch_size, :, :, :].add_(out_clip)
-        W[i : i + batch_size, :, :, :].add_(out_clip_mask)
-    output = E.div_(W)
-
-    return output.clamp(0.0, 1.0)
+    return output_tensor.clamp(0.0, 1.0)
 
 
-def get_zoom_model():
+def get_zoom4x_model():
     """Create model."""
 
     device = todos.model.get_device()
@@ -68,7 +58,7 @@ def get_zoom_model():
     model = model.to(device)
     model.eval()
 
-    # print(f"Running on {device} ...")
+    print(f"Running on {device} ...")
     # model = torch.jit.script(model)
 
     # todos.data.mkdir("output")
@@ -78,7 +68,7 @@ def get_zoom_model():
     return model, device
 
 
-def video_zoom_predict(input_file, output_file):
+def video_zoom4x_predict(input_file, output_file):
     # load video
     video = redos.video.Reader(input_file)
     if video.n_frames < 1:
@@ -90,9 +80,9 @@ def video_zoom_predict(input_file, output_file):
     todos.data.mkdir(output_dir)
 
     # load model
-    model, device = get_zoom_model()
+    model, device = get_zoom4x_model()
 
-    print(f"  zoom {input_file}, save to {output_file} ...")
+    print(f"  zoom4x {input_file}, save to {output_file} ...")
     lq_list = []
 
     def zoom_video_frame(no, data):
@@ -166,7 +156,6 @@ def video_deblur_predict(input_file, output_file):
     lq_list = []
 
     def deblur_video_frame(no, data):
-        # print(f"frame: {no} -- {data.shape}")
         input_tensor = todos.data.frame_totensor(data)
         # convert tensor from 1x4xHxW to 1x3xHxW
         input_tensor = input_tensor[:, 0:3, :, :]
@@ -238,7 +227,6 @@ def video_denoise_predict(input_file, sigma, output_file):
     lq_list = []
 
     def denoise_video_frame(no, data):
-        # print(f"frame: {no} -- {data.shape}")
         input_tensor = todos.data.frame_totensor(data)
         # input_tensor[:, 3:4, :, :] = sigma / 255.0  # Add noise strength
         lq_list.append(input_tensor[:, 0:3, :, :])
