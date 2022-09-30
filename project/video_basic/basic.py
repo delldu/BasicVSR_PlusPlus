@@ -17,20 +17,9 @@ from typing import Optional
 from typing import Dict
 import pdb
 
-from mmcv.cnn import ConvModule
-from mmcv.ops import ModulatedDeformConv2d, modulated_deform_conv2d  # xxxx9999
-
 
 def make_layer(block, num_blocks, **kwarg):
-    """Make layers by stacking the same blocks.
-
-    Args:
-        block (nn.module): nn.module class for basic block.
-        num_blocks (int): number of blocks.
-
-    Returns:
-        nn.Sequential: Stacked blocks in nn.Sequential.
-    """
+    """Make layers by stacking the same blocks."""
     layers = []
     for _ in range(num_blocks):
         layers.append(block(**kwarg))
@@ -38,21 +27,7 @@ def make_layer(block, num_blocks, **kwarg):
 
 
 class ResidualBlockNoBN(nn.Module):
-    """Residual block without BN.
-
-    It has a style of:
-
-    ::
-
-        ---Conv-ReLU-Conv-+-
-         |________________|
-
-    Args:
-        mid_channels (int): Channel number of intermediate features.
-            Default: 64.
-        res_scale (float): Used to scale the residual before addition.
-            Default: 1.0.
-    """
+    """Residual block without BN."""
 
     def __init__(self, mid_channels=64, res_scale=1.0):
         super(ResidualBlockNoBN, self).__init__()
@@ -69,14 +44,7 @@ class ResidualBlockNoBN(nn.Module):
 
 
 class ResidualBlocksWithInputConv(nn.Module):
-    """Residual blocks with a convolution in front.
-
-    Args:
-        in_channels (int): Number of input channels of the first conv.
-        out_channels (int): Number of channels of the residual blocks.
-            Default: 64.
-        num_blocks (int): Number of residual blocks. Default: 30.
-    """
+    """Residual blocks with a convolution in front."""
 
     def __init__(self, in_channels, out_channels=64, num_blocks=30):
         super(ResidualBlocksWithInputConv, self).__init__()
@@ -91,15 +59,6 @@ class ResidualBlocksWithInputConv(nn.Module):
         self.main = nn.Sequential(*main)
 
     def forward(self, feat):
-        """
-        Forward function for ResidualBlocksWithInputConv.
-
-        Args:
-            feat (Tensor): Input feature with shape (n, in_channels, h, w)
-
-        Returns:
-            Tensor: Output feature with shape (n, out_channels, h, w)
-        """
         return self.main(feat)
 
 
@@ -193,6 +152,27 @@ class SPyNet(nn.Module):
         return flow
 
 
+class ConvModule(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0, relu=True):
+        super(ConvModule, self).__init__()
+        self.conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=(kernel_size, kernel_size),
+            stride=(stride, stride),
+            padding=(padding, padding),
+        )
+        if relu:
+            self.activate = nn.ReLU(inplace=True)
+        else:
+            self.activate = nn.Identity()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.activate(x)
+        return x
+
+
 class SPyNetBasicModule(nn.Module):
     """Basic Module for SPyNet.
     Paper:
@@ -208,8 +188,6 @@ class SPyNetBasicModule(nn.Module):
                 kernel_size=7,
                 stride=1,
                 padding=3,
-                norm_cfg=None,
-                act_cfg=dict(type="ReLU"),
             ),
             ConvModule(
                 in_channels=32,
@@ -217,8 +195,6 @@ class SPyNetBasicModule(nn.Module):
                 kernel_size=7,
                 stride=1,
                 padding=3,
-                norm_cfg=None,
-                act_cfg=dict(type="ReLU"),
             ),
             ConvModule(
                 in_channels=64,
@@ -226,8 +202,6 @@ class SPyNetBasicModule(nn.Module):
                 kernel_size=7,
                 stride=1,
                 padding=3,
-                norm_cfg=None,
-                act_cfg=dict(type="ReLU"),
             ),
             ConvModule(
                 in_channels=32,
@@ -235,10 +209,8 @@ class SPyNetBasicModule(nn.Module):
                 kernel_size=7,
                 stride=1,
                 padding=3,
-                norm_cfg=None,
-                act_cfg=dict(type="ReLU"),
             ),
-            ConvModule(in_channels=16, out_channels=2, kernel_size=7, stride=1, padding=3, norm_cfg=None, act_cfg=None),
+            ConvModule(in_channels=16, out_channels=2, kernel_size=7, stride=1, padding=3, relu=False),
         )
 
     def forward(self, tensor_input):
@@ -317,14 +289,6 @@ class PixelShufflePack(nn.Module):
         )
 
     def forward(self, x):
-        """Forward function for PixelShufflePack.
-
-        Args:
-            x (Tensor): Input tensor with shape (n, c, h, w).
-
-        Returns:
-            Tensor: Forward results.
-        """
         x = self.upsample_conv(x)
         x = F.pixel_shuffle(x, self.scale_factor)
         return x
@@ -572,6 +536,43 @@ class BasicVSRPlusPlus(nn.Module):
         return self.upsample(lqs, feats)
 
 
+class ModulatedDeformConv2d(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        deform_groups=1,
+        bias=True,
+    ):
+        super(ModulatedDeformConv2d, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = (kernel_size, kernel_size)
+        self.stride = (stride, stride)
+        self.padding = (padding, padding)
+        self.dilation = (dilation, dilation)
+        self.groups = groups
+        self.deform_groups = deform_groups
+        # enable compatibility with nn.Conv2d
+        self.transposed = False
+        self.output_padding = 0
+
+        self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels // groups, *self.kernel_size))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(out_channels))
+        else:
+            self.register_parameter("bias", None)
+
+    def forward(self, x, offset, mask):
+        pass
+        return x
+
+
 class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
     """Second-order deformable alignment module.
 
@@ -583,9 +584,7 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
         padding (int or tuple[int]): Same as nn.Conv2d.
         dilation (int or tuple[int]): Same as nn.Conv2d.
         groups (int): Same as nn.Conv2d.
-        bias (bool or str): If specified as `auto`, it will be decided by the
-            norm_cfg. Bias will be set as True if norm_cfg is None, otherwise
-            False.
+        bias (bool): False.
         max_residue_magnitude (int): The maximum magnitude of the offset
             residue (Eq. 6 in paper). Default: 10.
 
@@ -629,30 +628,25 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
         # mask
         mask = torch.sigmoid(mask)  # [1, 144, 180, 320]
 
-        return modulated_deform_conv2d(
+        return torchvision.ops.deform_conv2d(
             x,
             offset,
-            mask,
             self.weight,
             self.bias,
             self.stride,
             self.padding,
             self.dilation,
-            self.groups,
-            self.deform_groups,
+            mask,
         )
 
 
 def zoom_model():
-    model = BasicVSRPlusPlus(num_blocks=7, is_low_res_input=True)
-    return model
+    return BasicVSRPlusPlus(num_blocks=7, is_low_res_input=True)
 
 
 def deblur_model():
-    model = BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
-    return model
+    return BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
 
 
 def denoise_model():
-    model = BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
-    return model
+    return BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)

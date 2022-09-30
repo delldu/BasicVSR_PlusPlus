@@ -58,7 +58,7 @@ def get_zoom4x_model():
     model = model.to(device)
     model.eval()
 
-    print(f"Running on {device} ...")
+    # print(f"Running on {device} ...")
     # model = torch.jit.script(model)
 
     # todos.data.mkdir("output")
