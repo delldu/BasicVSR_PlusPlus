@@ -22,7 +22,7 @@ setup(
     description="video basic package (Super Resolution, Deblur, Denoise)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/delldu/VRT.git",
+    url=" https://github.com/delldu/BasicVSR_PlusPlus.git",
     packages=["video_basic"],
     package_data={"video_basic": ["models/video_zoom.pth", "models/video_deblur.pth", "models/video_denoise.pth"]},
     include_package_data=True,

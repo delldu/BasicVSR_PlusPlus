@@ -1,4 +1,4 @@
-"""Video Matte Package."""  # coding=utf-8
+"""Video Basic Package."""  # coding=utf-8
 #
 # /************************************************************************************
 # ***
@@ -58,12 +58,12 @@ def get_zoom4x_model():
     model = model.to(device)
     model.eval()
 
-    # print(f"Running on {device} ...")
-    # model = torch.jit.script(model)
+    print(f"Running on {device} ...")
+    model = torch.jit.script(model)
 
-    # todos.data.mkdir("output")
-    # if not os.path.exists("output/video_zoom.torch"):
-    #     model.save("output/video_zoom.torch")
+    todos.data.mkdir("output")
+    if not os.path.exists("output/video_zoom4x.torch"):
+        model.save("output/video_zoom4x.torch")
 
     return model, device
 
@@ -129,11 +129,11 @@ def get_deblur_model():
     model.eval()
 
     print(f"Running on {device} ...")
-    # model = torch.jit.script(model)
+    model = torch.jit.script(model)
 
-    # todos.data.mkdir("output")
-    # if not os.path.exists("output/video_deblur.torch"):
-    #     model.save("output/video_deblur.torch")
+    todos.data.mkdir("output")
+    if not os.path.exists("output/video_deblur.torch"):
+        model.save("output/video_deblur.torch")
 
     return model, device
 
@@ -200,11 +200,11 @@ def get_denoise_model():
     model.eval()
 
     print(f"Running on {device} ...")
-    # model = torch.jit.script(model)
+    model = torch.jit.script(model)
 
-    # todos.data.mkdir("output")
-    # if not os.path.exists("output/video_denoise.torch"):
-    #     model.save("output/video_denoise.torch")
+    todos.data.mkdir("output")
+    if not os.path.exists("output/video_denoise.torch"):
+        model.save("output/video_denoise.torch")
 
     return model, device
 

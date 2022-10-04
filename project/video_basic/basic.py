@@ -1,19 +1,20 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+"""Video Basic Package."""  # coding=utf-8
 #
-# This source code is licensed under the BSD license found in the
-# LICENSE file in the root directory of this source tree.
+# /************************************************************************************
+# ***
+# ***    Copyright Dell 2022(18588220928@163.com) All Rights Reserved.
+# ***
+# ***    File Author: Dell, 2022年 10月 05日 星期三 01:31:30 CST
+# ***
+# ************************************************************************************/
+#
 
-import warnings
-import math
 import torch
 import torch.nn as nn
 import torchvision
 import torch.nn.functional as F
 
-from einops.layers.torch import Rearrange
 from typing import List
-from typing import Tuple
-from typing import Optional
 from typing import Dict
 import pdb
 
@@ -81,44 +82,42 @@ class SPyNet(nn.Module):
 
     def compute_flow(self, ref, supp):
         """Compute flow from ref to supp.
-
-        Note that in this function, the images are already resized to a
-        multiple of 32.
-
         Args:
             ref (Tensor): Reference image with shape of (n, 3, h, w).
             supp (Tensor): Supporting image with shape of (n, 3, h, w).
-
         Returns:
             Tensor: Estimated optical flow: (n, 2, h, w).
         """
-        n, _, h, w = ref.size()
+        n, _, h, w = ref.size()  # [9, 3, 192, 320]
 
         # normalize the input images
-        ref = [(ref - self.mean) / self.std]
-        supp = [(supp - self.mean) / self.std]
+        ref: List[torch.Tensor] = [(ref - self.mean) / self.std]  # ==> List
+        supp: List[torch.Tensor] = [(supp - self.mean) / self.std]  # ==> List
 
         # generate downsampled frames
         for level in range(5):
-            ref.append(F.avg_pool2d(input=ref[-1], kernel_size=2, stride=2, count_include_pad=False))
-            supp.append(F.avg_pool2d(input=supp[-1], kernel_size=2, stride=2, count_include_pad=False))
+            ref.append(F.avg_pool2d(ref[-1], kernel_size=2, stride=2, count_include_pad=False))
+            supp.append(F.avg_pool2d(supp[-1], kernel_size=2, stride=2, count_include_pad=False))
+
         ref = ref[::-1]  # reverse list
         supp = supp[::-1]  # reverse list
 
         # flow computation
         flow = ref[0].new_zeros(n, 2, h // 32, w // 32)
-        for level in range(len(ref)):
+        for level, m in enumerate(self.basic_module):  # range(len(ref)):
             if level == 0:
                 flow_up = flow
             else:
-                flow_up = F.interpolate(input=flow, scale_factor=2, mode="bilinear", align_corners=True) * 2.0
+                flow_up = (
+                    F.interpolate(
+                        flow, scale_factor=2.0, mode="bilinear", align_corners=True, recompute_scale_factor=True
+                    )
+                    * 2.0
+                )
 
             # add the residue to the upsampled flow
-            flow = flow_up + self.basic_module[level](
-                torch.cat(
-                    [ref[level], flow_warp(supp[level], flow_up.permute(0, 2, 3, 1), padding_mode="border"), flow_up], 1
-                )
-            )
+            t = flow_warp(supp[level], flow_up.permute(0, 2, 3, 1), padding_mode="border")
+            flow = flow_up + m(torch.cat([ref[level], t, flow_up], dim=1))
 
         return flow
 
@@ -139,11 +138,11 @@ class SPyNet(nn.Module):
         h, w = ref.shape[2:4]
         w_up = w if (w % 32) == 0 else 32 * (w // 32 + 1)
         h_up = h if (h % 32) == 0 else 32 * (h // 32 + 1)
-        ref = F.interpolate(input=ref, size=(h_up, w_up), mode="bilinear", align_corners=False)
-        supp = F.interpolate(input=supp, size=(h_up, w_up), mode="bilinear", align_corners=False)
+        ref = F.interpolate(ref, size=(h_up, w_up), mode="bilinear", align_corners=False)
+        supp = F.interpolate(supp, size=(h_up, w_up), mode="bilinear", align_corners=False)
 
         # compute flow, and resize back to the original resolution
-        flow = F.interpolate(input=self.compute_flow(ref, supp), size=(h, w), mode="bilinear", align_corners=False)
+        flow = F.interpolate(self.compute_flow(ref, supp), size=(h, w), mode="bilinear", align_corners=False)
 
         # adjust the flow values
         flow[:, 0, :, :] *= float(w) / float(w_up)
@@ -214,19 +213,10 @@ class SPyNetBasicModule(nn.Module):
         )
 
     def forward(self, tensor_input):
-        """
-        Args:
-            tensor_input (Tensor): Input tensor with shape (b, 8, h, w).
-                8 channels contain:
-                [reference image (3), neighbor image (3), initial flow (2)].
-
-        Returns:
-            Tensor: Refined flow with shape (b, 2, h, w)
-        """
         return self.basic_module(tensor_input)
 
 
-def flow_warp(x, flow, interpolation="bilinear", padding_mode="zeros", align_corners=True):
+def flow_warp(x, flow, interpolation: str = "bilinear", padding_mode: str = "zeros", align_corners: bool = True):
     """Warp an image or a feature map with optical flow.
 
     Args:
@@ -251,7 +241,7 @@ def flow_warp(x, flow, interpolation="bilinear", padding_mode="zeros", align_cor
     # create mesh grid
     grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w))
     grid = torch.stack((grid_x, grid_y), 2).type_as(x)  # (h, w, 2)
-    grid.requires_grad = False
+    # grid.requires_grad = False
 
     grid_flow = grid + flow
     # scale grid_flow to [-1,1]
@@ -263,17 +253,7 @@ def flow_warp(x, flow, interpolation="bilinear", padding_mode="zeros", align_cor
 
 
 class PixelShufflePack(nn.Module):
-    """Pixel Shuffle upsample layer.
-
-    Args:
-        in_channels (int): Number of input channels.
-        out_channels (int): Number of output channels.
-        scale_factor (int): Upsample ratio.
-        upsample_kernel (int): Kernel size of Conv layer to expand channels.
-
-    Returns:
-        Upsampled feature map.
-    """
+    """Pixel Shuffle upsample layer."""
 
     def __init__(self, in_channels, out_channels, scale_factor, upsample_kernel):
         super(PixelShufflePack, self).__init__()
@@ -296,9 +276,6 @@ class PixelShufflePack(nn.Module):
 
 class BasicVSRPlusPlus(nn.Module):
     """BasicVSR++ network structure.
-
-    Support either x4 upsampling or same size output.
-
     Paper:
         BasicVSR++: Improving Video Super-Resolution with Enhanced Propagation
         and Alignment
@@ -359,12 +336,12 @@ class BasicVSRPlusPlus(nn.Module):
         self.upsample2 = PixelShufflePack(mid_channels, 64, 2, upsample_kernel=3)
         self.conv_hr = nn.Conv2d(64, 64, 3, 1, 1)
         self.conv_last = nn.Conv2d(64, 3, 3, 1, 1)
-        self.img_upsample = nn.Upsample(scale_factor=4, mode="bilinear", align_corners=False)
+        self.img_upsample = nn.Upsample(scale_factor=4.0, mode="bilinear", align_corners=False)
 
         # activation function
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
-    def compute_flow(self, lqs):
+    def compute_flow(self, lqs) -> List[torch.Tensor]:
         """Compute optical flow using SPyNet for feature alignment.
         Args:
             lqs (tensor): Input low quality (LQ) sequence with
@@ -382,10 +359,9 @@ class BasicVSRPlusPlus(nn.Module):
 
         flows_backward = self.spynet(lqs_1, lqs_2).view(n, t - 1, 2, h, w)
         flows_forward = self.spynet(lqs_2, lqs_1).view(n, t - 1, 2, h, w)
-
         return flows_forward, flows_backward
 
-    def propagate(self, feats, flows, module_name):
+    def propagate(self, feats: Dict[str, List[torch.Tensor]], flows, module_name: str):
         """Propagate the latent features throughout the sequence.
 
         Args:
@@ -395,7 +371,7 @@ class BasicVSRPlusPlus(nn.Module):
             module_name (str): The name of the propgation branches. Can either
                 be 'backward_1', 'forward_1', 'backward_2', 'forward_2'.
         """
-        # Propagate transformer -----
+        # Propagate map -----
         # backward_1, ['spatial', 'backward_1']
         # forward_1, ['spatial', 'backward_1', 'forward_1']
         # backward_2, ['spatial', 'backward_1', 'forward_1', 'backward_2']
@@ -403,14 +379,22 @@ class BasicVSRPlusPlus(nn.Module):
 
         n, t, _, h, w = flows.size()  # [1, 11, 2, 135, 240]
 
-        frame_idx = range(0, t + 1)  # [0, 1, ..., 11]
-        flow_idx = range(-1, t)  # [-1, 0, ..., 10]
+        forward_frame_idx: List[int] = list(range(0, t + 1))  # [0, 1, ..., 11]
+        forward_flow_idx: List[int] = list(range(-1, t))  # [-1, 0, ..., 10]
 
-        if "backward" in module_name:
-            frame_idx = frame_idx[::-1]
-            flow_idx = frame_idx
+        backward_frame_idx: List[int] = list(range(t, -1, -1))  # [11, 10, ..., 0]
+        backward_flow_idx: List[int] = backward_frame_idx
 
+        pg_keys = ["backward_1", "forward_1", "backward_2", "forward_2"]
         feat_prop = flows.new_zeros(n, self.mid_channels, h, w).to(flows.device)
+
+        if "forward" in module_name:
+            frame_idx = forward_frame_idx
+            flow_idx = forward_flow_idx
+        else:
+            frame_idx = backward_frame_idx
+            flow_idx = backward_flow_idx
+
         for i, idx in enumerate(frame_idx):
             feat_current = feats["spatial"][idx]
 
@@ -434,13 +418,26 @@ class BasicVSRPlusPlus(nn.Module):
                 # flow-guided deformable convolution
                 cond = torch.cat([cond_n1, feat_current, cond_n2], dim=1)
                 feat_prop = torch.cat([feat_prop, feat_n2], dim=1)
-                feat_prop = self.deform_align[module_name](feat_prop, cond, flow_n1, flow_n2)
+
+                # feat_prop = self.deform_align[module_name](feat_prop, cond, flow_n1, flow_n2)
+                for k, m in self.deform_align.items():
+                    if k == module_name:
+                        feat_prop = m(feat_prop, cond, flow_n1, flow_n2)
 
             # concatenate and residual blocks
-            # ['spatial', 'backward_1', 'forward_1', 'backward_2', 'forward_2'] + feat_prop
-            feat = [feat_current] + [feats[k][idx] for k in feats if k not in ["spatial", module_name]] + [feat_prop]
+            # feat = [feat_current] + [feats[k][idx] for k in feats if k not in ["spatial", module_name]] + [feat_prop]
+            feat = [feat_current]
+            for k in pg_keys:
+                if k != module_name and k in feats.keys():
+                    feat.append(feats[k][idx])
+            feat.append(feat_prop)
             feat = torch.cat(feat, dim=1)
-            feat_prop = feat_prop + self.backbone[module_name](feat)
+
+            # feat_prop = feat_prop + self.backbone[module_name](feat)
+            for k, m in self.backbone.items():
+                if k == module_name:
+                    feat_prop = feat_prop + m(feat)
+
             feats[module_name].append(feat_prop)
 
         if "backward" in module_name:
@@ -448,7 +445,7 @@ class BasicVSRPlusPlus(nn.Module):
 
         return feats
 
-    def upsample(self, lqs, feats):
+    def upsample(self, lqs, feats: Dict[str, List[torch.Tensor]]):
         """Compute the output image given the features.
 
         Args:
@@ -459,13 +456,15 @@ class BasicVSRPlusPlus(nn.Module):
             Tensor: Output HR sequence with shape (n, t, c, 4h | h, 4w |w).
         """
         outputs = []
-
-        # feats.keys() -- ['spatial', 'backward_1', 'forward_1', 'backward_2', 'forward_2']
         for i in range(0, lqs.size(1)):
-            hr = [feats[k].pop(0) for k in feats if k != "spatial"]
-
-            hr.insert(0, feats["spatial"][i])
-            hr = torch.cat(hr, dim=1)
+            # hr = [feats[k].pop(0) for k in feats if k != "spatial"]
+            # hr.insert(0, feats["spatial"][i])
+            # hr = torch.cat(hr, dim=1)
+            hr_list = []
+            # feats.keys() -- ['spatial', 'backward_1', 'forward_1', 'backward_2', 'forward_2']
+            for key in feats.keys():
+                hr_list.append(feats[key][i])
+            hr = torch.cat(hr_list, dim=1)
 
             hr = self.reconstruction(hr)
             hr = self.lrelu(self.upsample1(hr))
@@ -494,11 +493,15 @@ class BasicVSRPlusPlus(nn.Module):
         if self.is_low_res_input:  # Zoom: True
             lqs_downsample = lqs.clone()
         else:
-            lqs_downsample = F.interpolate(lqs.view(-1, c, h, w), scale_factor=0.25, mode="bicubic").view(
-                n, t, c, h // 4, w // 4
-            )
+            lqs_downsample = F.interpolate(
+                lqs.view(-1, c, h, w),
+                scale_factor=0.25,
+                mode="bicubic",
+                recompute_scale_factor=True,
+                align_corners=False,
+            ).view(n, t, c, h // 4, w // 4)
 
-        feats = {}
+        feats: Dict[str, List[torch.Tensor]] = {}
         # compute spatial features
         feats["spatial"] = []
         for i in range(0, t):
@@ -507,31 +510,27 @@ class BasicVSRPlusPlus(nn.Module):
         #  feats.keys() -- ['spatial'], len(feats['spatial']) -- 12
 
         # compute optical flow using the low-res inputs
-        assert lqs_downsample.size(3) >= 64 and lqs_downsample.size(4) >= 64, (
-            "The height and width of low-res inputs must be at least 64, " f"but got {h} and {w}."
-        )
+        # assert lqs_downsample.size(3) >= 64 and lqs_downsample.size(4) >= 64, (
+        #     "The height and width of low-res inputs must be at least 64, " f"but got {h} and {w}."
+        # )
         flows_forward, flows_backward = self.compute_flow(lqs_downsample)
         # len(flows_forward), flows_forward[0].size()
-        # (1, [20, 2, 180, 320])
+        # (1, [12, 2, 180, 320])
         # len(flows_backward), flows_backward[0].size()
-        # (1, [20, 2, 180, 320])
+        # (1, [12, 2, 180, 320])
 
         # feature propgation
-        # ["backward_1", "forward_1", "backward_2", "forward_2"]
-        for iter_ in [1, 2]:
-            for direction in ["backward", "forward"]:
-                module = f"{direction}_{iter_}"
-                feats[module] = []
+        pg_keys = ["backward_1", "forward_1", "backward_2", "forward_2"]
+        for module_name in pg_keys:
+            feats[module_name] = []
+            if "backward" in module_name:
+                flows = flows_backward
+            elif flows_forward is not None:
+                flows = flows_forward
+            else:
+                flows = flows_backward.flip(1)
 
-                if direction == "backward":
-                    flows = flows_backward
-                elif flows_forward is not None:
-                    flows = flows_forward
-                else:
-                    flows = flows_backward.flip(1)
-
-                # feats = self.propagate(feats, flows, module)
-                self.propagate(feats, flows, module)
+            self.propagate(feats, flows, module_name)
 
         return self.upsample(lqs, feats)
 
