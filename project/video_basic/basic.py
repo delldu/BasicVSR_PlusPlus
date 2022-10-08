@@ -239,7 +239,7 @@ def flow_warp(x, flow, interpolation: str = "bilinear", padding_mode: str = "zer
         )
     _, _, h, w = x.size()
     # create mesh grid
-    grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing='ij')
+    grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing="ij")
     grid = torch.stack((grid_x, grid_y), 2).type_as(x)  # (h, w, 2)
     # grid.requires_grad = False
 
