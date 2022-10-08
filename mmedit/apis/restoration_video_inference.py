@@ -110,8 +110,6 @@ def restoration_video_inference(model, img_dir, window_size, start_idx, filename
             result = []
             for i in range(0, data.size(1) - 2 * (window_size // 2)):
                 data_i = data[:, i : i + window_size].to(device)
-                pdb.set_trace()
-
                 result.append(model(lq=data_i, test_mode=True)["output"].cpu())
             result = torch.stack(result, dim=1)
         else:  # recurrent framework

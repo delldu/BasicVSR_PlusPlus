@@ -3,11 +3,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import constant_init
-from mmcv.ops import ModulatedDeformConv2d, modulated_deform_conv2d
+from mmcv.ops import ModulatedDeformConv2d, modulated_deform_conv2d # xxxx9999
 from mmcv.runner import load_checkpoint
 
+# xxxx9999
 from mmedit.models.backbones.sr_backbones.basicvsr_net import ResidualBlocksWithInputConv, SPyNet
-from mmedit.models.common import PixelShufflePack, flow_warp
+from mmedit.models.common import PixelShufflePack, flow_warp # xxxx9999
 from mmedit.models.registry import BACKBONES
 from mmedit.utils import get_root_logger
 import pdb
@@ -35,11 +36,6 @@ class BasicVSRPlusPlus(nn.Module):
             resolution. Default: True.
         spynet_pretrained (str, optional): Pre-trained model path of SPyNet.
             Default: None.
-        cpu_cache_length (int, optional): When the length of sequence is larger
-            than this value, the intermediate features are sent to CPU. This
-            saves GPU memory, but slows down the inference speed. You can
-            increase this number if you have a GPU with large memory.
-            Default: 100.
     """
 
     def __init__(
@@ -49,7 +45,6 @@ class BasicVSRPlusPlus(nn.Module):
         max_residue_magnitude=10,
         is_low_res_input=True,
         spynet_pretrained=None,
-        cpu_cache_length=100,
     ):
 
         super().__init__()
@@ -59,15 +54,13 @@ class BasicVSRPlusPlus(nn.Module):
         # max_residue_magnitude = 10
         # is_low_res_input = True
         # spynet_pretrained = 'https://download.openmmlab.com/mmediting/restorers/basicvsr/spynet_20210409-c6c1bd09.pth'
-        # cpu_cache_length = 100
 
-        # xxxx8888 Denoise/Deblur
+        # Denoise/Deblur
         # num_blocks = 15
         # is_low_res_input = False
 
         self.mid_channels = mid_channels
         self.is_low_res_input = is_low_res_input
-        self.cpu_cache_length = cpu_cache_length
 
         # optical flow
         self.spynet = SPyNet(pretrained=spynet_pretrained)
@@ -110,24 +103,9 @@ class BasicVSRPlusPlus(nn.Module):
         # activation function
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
-        # check if the sequence is augmented by flipping
-        self.is_mirror_extended = False
 
-    def check_if_mirror_extended(self, lqs):
-        """Check whether the input is a mirror-extended sequence.
-
-        If mirror-extended, the i-th (i=0, ..., t-1) frame is equal to the
-        (t-1-i)-th frame.
-
-        Args:
-            lqs (tensor): Input low quality (LQ) sequence with
-                shape (n, t, c, h, w).
-        """
-
-        if lqs.size(1) % 2 == 0:  # Zoom: False
-            lqs_1, lqs_2 = torch.chunk(lqs, 2, dim=1)
-            if torch.norm(lqs_1 - lqs_2.flip(1)) == 0:
-                self.is_mirror_extended = True
+    def init_weights(self, pretrained):
+        pass
 
     def compute_flow(self, lqs):
 
@@ -152,15 +130,7 @@ class BasicVSRPlusPlus(nn.Module):
         lqs_2 = lqs[:, 1:, :, :, :].reshape(-1, c, h, w)
 
         flows_backward = self.spynet(lqs_1, lqs_2).view(n, t - 1, 2, h, w)
-
-        if self.is_mirror_extended:  # flows_forward = flows_backward.flip(1)
-            flows_forward = None
-        else:
-            flows_forward = self.spynet(lqs_2, lqs_1).view(n, t - 1, 2, h, w)
-
-        if self.cpu_cache:
-            flows_backward = flows_backward.cpu()
-            flows_forward = flows_forward.cpu()
+        flows_forward = self.spynet(lqs_2, lqs_1).view(n, t - 1, 2, h, w)
 
         return flows_forward, flows_backward
 
@@ -179,29 +149,38 @@ class BasicVSRPlusPlus(nn.Module):
                 features. Each key in the dictionary corresponds to a
                 propagation branch, which is represented by a list of tensors.
         """
-        # feats.keys() -- ['spatial', 'backward_1']
-        n, t, _, h, w = flows.size()  # [1, 20, 2, 180, 320]
+        # Propagate transformer -----
+        # backward_1, ['spatial', 'backward_1']
+        # forward_1, ['spatial', 'backward_1', 'forward_1']
+        # backward_2, ['spatial', 'backward_1', 'forward_1', 'backward_2']
+        # forward_2, ['spatial', 'backward_1', 'forward_1', 'backward_2', 'forward_2']
 
-        frame_idx = range(0, t + 1)
-        flow_idx = range(-1, t)
-        mapping_idx = list(range(0, len(feats["spatial"])))
-        mapping_idx += mapping_idx[::-1]
+        n, t, _, h, w = flows.size()  # [1, 11, 2, 135, 240]
+
+        frame_idx = range(0, t + 1) # [0, 1, ..., 11]
+        flow_idx = range(-1, t)     # [-1, 0, ..., 10]
+        # mapping_idx = list(range(0, len(feats["spatial"]))) # [0, 1, ..., 11]
+        # mapping_idx += mapping_idx[::-1] # [0, ..., 11, 11, ..., 0]
 
         if "backward" in module_name:
             frame_idx = frame_idx[::-1]
             flow_idx = frame_idx
 
-        feat_prop = flows.new_zeros(n, self.mid_channels, h, w)
+        feat_prop = flows.new_zeros(n, self.mid_channels, h, w).to(flows.device)
         for i, idx in enumerate(frame_idx):
-            feat_current = feats["spatial"][mapping_idx[idx]]
-            if self.cpu_cache:
-                feat_current = feat_current.cuda()
-                feat_prop = feat_prop.cuda()
+            # if mapping_idx[idx] != idx:
+            #     print("------- Warnning: ", idx, mapping_idx)
+
+            # feat_current = feats["spatial"][mapping_idx[idx]]
+            feat_current = feats["spatial"][idx]
+
+            # feat_current = feat_current.cuda()
+            # feat_prop = feat_prop.cuda()
+
             # second-order deformable alignment
             if i > 0:
                 flow_n1 = flows[:, flow_idx[i], :, :, :]
-                if self.cpu_cache:
-                    flow_n1 = flow_n1.cuda()
+                # flow_n1 = flow_n1.cuda()
 
                 cond_n1 = flow_warp(feat_prop, flow_n1.permute(0, 2, 3, 1))
 
@@ -212,12 +191,10 @@ class BasicVSRPlusPlus(nn.Module):
 
                 if i > 1:  # second-order features
                     feat_n2 = feats[module_name][-2]
-                    if self.cpu_cache:
-                        feat_n2 = feat_n2.cuda()
+                    # feat_n2 = feat_n2.cuda()
 
                     flow_n2 = flows[:, flow_idx[i - 1], :, :, :]
-                    if self.cpu_cache:
-                        flow_n2 = flow_n2.cuda()
+                    # flow_n2 = flow_n2.cuda()
 
                     flow_n2 = flow_n1 + flow_warp(flow_n2, flow_n1.permute(0, 2, 3, 1))
                     cond_n2 = flow_warp(feat_n2, flow_n2.permute(0, 2, 3, 1))
@@ -228,22 +205,15 @@ class BasicVSRPlusPlus(nn.Module):
                 feat_prop = self.deform_align[module_name](feat_prop, cond, flow_n1, flow_n2)
 
             # concatenate and residual blocks
+            # ['spatial', 'backward_1', 'forward_1', 'backward_2', 'forward_2'] + feat_prop
             feat = [feat_current] + [feats[k][idx] for k in feats if k not in ["spatial", module_name]] + [feat_prop]
-            if self.cpu_cache:
-                feat = [f.cuda() for f in feat]
-
             feat = torch.cat(feat, dim=1)
             feat_prop = feat_prop + self.backbone[module_name](feat)
             feats[module_name].append(feat_prop)
 
-            if self.cpu_cache:
-                feats[module_name][-1] = feats[module_name][-1].cpu()
-                torch.cuda.empty_cache()
-
         if "backward" in module_name:
             feats[module_name] = feats[module_name][::-1]
 
-        # feats.keys() -- ['spatial', 'backward_1']
         return feats
 
     def upsample(self, lqs, feats):
@@ -259,17 +229,22 @@ class BasicVSRPlusPlus(nn.Module):
 
         """
         outputs = []
-        num_outputs = len(feats["spatial"])
+        # num_outputs = len(feats["spatial"])
 
-        mapping_idx = list(range(0, num_outputs))
-        mapping_idx += mapping_idx[::-1]
+        # mapping_idx = list(range(0, num_outputs))
+        # mapping_idx += mapping_idx[::-1]
 
+        # feats.keys() -- ['spatial', 'backward_1', 'forward_1', 'backward_2', 'forward_2']
         for i in range(0, lqs.size(1)):
+            # feats order is important ?
             hr = [feats[k].pop(0) for k in feats if k != "spatial"]
-            hr.insert(0, feats["spatial"][mapping_idx[i]])
+            # if mapping_idx[i] != i:
+            #     print("----------- Warnning mapping_idx[i] != i", mapping_idx, i)
+
+            # hr.insert(0, feats["spatial"][mapping_idx[i]])
+            hr.insert(0, feats["spatial"][i])
+
             hr = torch.cat(hr, dim=1)
-            if self.cpu_cache:
-                hr = hr.cuda()
 
             hr = self.reconstruction(hr)
             hr = self.lrelu(self.upsample1(hr))
@@ -281,13 +256,9 @@ class BasicVSRPlusPlus(nn.Module):
             else:
                 hr += lqs[:, i, :, :, :]
 
-            if self.cpu_cache:
-                hr = hr.cpu()
-                torch.cuda.empty_cache()
-
             outputs.append(hr)
-
-        return torch.stack(outputs, dim=1)
+        # outputs[i].size() -- [1, 3, 540, 960] for i in [0, 11]
+        return torch.stack(outputs, dim=1) # [1, 12, 3, 540, 960]
 
     def forward(self, lqs):
         """Forward function for BasicVSR++.
@@ -302,11 +273,6 @@ class BasicVSRPlusPlus(nn.Module):
         n, t, c, h, w = lqs.size()  # [1, 21, 3, 180, 320]
 
         # whether to cache the features in CPU (no effect if using CPU)
-        if t > self.cpu_cache_length and lqs.is_cuda:
-            self.cpu_cache = True
-        else:
-            self.cpu_cache = False
-
         if self.is_low_res_input:  # Zoom: True
             lqs_downsample = lqs.clone()
         else:
@@ -314,22 +280,13 @@ class BasicVSRPlusPlus(nn.Module):
                 n, t, c, h // 4, w // 4
             )
 
-        # check whether the input is an extended sequence
-        self.check_if_mirror_extended(lqs)
-
         feats = {}
         # compute spatial features
-        if self.cpu_cache:
-            feats["spatial"] = []
-            for i in range(0, t):
-                feat = self.feat_extract(lqs[:, i, :, :, :]).cpu()
-                feats["spatial"].append(feat)
-                torch.cuda.empty_cache()
-        else:
-            feats_ = self.feat_extract(lqs.view(-1, c, h, w))
-            h, w = feats_.shape[2:]
-            feats_ = feats_.view(n, t, -1, h, w)
-            feats["spatial"] = [feats_[:, i, :, :, :] for i in range(0, t)]
+        feats["spatial"] = []
+        for i in range(0, t):
+            feat = self.feat_extract(lqs[:, i, :, :, :])
+            feats["spatial"].append(feat)
+        #  feats.keys() -- ['spatial'], len(feats['spatial']) -- 12
 
         # compute optical flow using the low-res inputs
         assert lqs_downsample.size(3) >= 64 and lqs_downsample.size(4) >= 64, (
@@ -342,10 +299,10 @@ class BasicVSRPlusPlus(nn.Module):
         # (1, [20, 2, 180, 320])
 
         # feature propgation
+        # ["backward_1", "forward_1", "backward_2", "forward_2"]
         for iter_ in [1, 2]:
             for direction in ["backward", "forward"]:
                 module = f"{direction}_{iter_}"
-
                 feats[module] = []
 
                 if direction == "backward":
@@ -355,27 +312,10 @@ class BasicVSRPlusPlus(nn.Module):
                 else:
                     flows = flows_backward.flip(1)
 
-                feats = self.propagate(feats, flows, module)
-                if self.cpu_cache:
-                    del flows
-                    torch.cuda.empty_cache()
+                # feats = self.propagate(feats, flows, module)
+                self.propagate(feats, flows, module)
 
         return self.upsample(lqs, feats)
-
-    def init_weights(self, pretrained=None, strict=True):
-        """Init weights for models.
-
-        Args:
-            pretrained (str, optional): Path for pretrained weights. If given
-                None, pretrained weights will not be loaded. Default: None.
-            strict (bool, optional): Whether strictly load the pretrained
-                model. Default: True.
-        """
-        if isinstance(pretrained, str):
-            logger = get_root_logger()
-            load_checkpoint(self, pretrained, strict=strict, logger=logger)
-        elif pretrained is not None:
-            raise TypeError(f'"pretrained" must be a str or None. ' f"But received {type(pretrained)}.")
 
 
 class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
@@ -434,7 +374,7 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
     def forward(self, x, extra_feat, flow_1, flow_2):
         extra_feat = torch.cat([extra_feat, flow_1, flow_2], dim=1)
         out = self.conv_offset(extra_feat)
-        o1, o2, mask = torch.chunk(out, 3, dim=1)
+        o1, o2, mask = torch.chunk(out, 3, dim=1) # out.size() -- [1, 432, 135, 240]
 
         # offset
         offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))

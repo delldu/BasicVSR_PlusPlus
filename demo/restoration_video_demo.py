@@ -55,11 +55,8 @@ def main():
     # Denoise:
     # torch.save(model.generator.state_dict(), "/tmp/video_denoise.pth")
     #
-
-    pdb.set_trace()
-    #
     # torch.save(model.generator.state_dict(), "/tmp/video_deblur.pth")
-
+    
     output = restoration_video_inference(
         model, args.input_dir, args.window_size, args.start_idx, args.filename_tmpl, args.max_seq_len
     )

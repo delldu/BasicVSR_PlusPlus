@@ -9,7 +9,6 @@ model = dict(
         num_blocks=25,
         is_low_res_input=False,
         spynet_pretrained="https://download.openmmlab.com/mmediting/restorers/" "basicvsr/spynet_20210409-c6c1bd09.pth",
-        cpu_cache_length=100,
     ),
     pixel_loss=dict(type="CharbonnierLoss", loss_weight=1.0, reduction="mean"),
     ensemble=dict(type="SpatialTemporalEnsemble", is_temporal_ensemble=False),

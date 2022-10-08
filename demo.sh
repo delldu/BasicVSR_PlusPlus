@@ -13,6 +13,7 @@ video_deblur()
         configs/basicvsr_plusplus_deblur_dvd.py \
         chkpts/basicvsr_plusplus_deblur_dvd-ecd08b7f.pth \
         data/girl \
+        --max-seq-len 12 \
         results/deblur_demo_000
 }
 
@@ -22,9 +23,10 @@ video_denoise()
         configs/basicvsr_plusplus_denoise.py \
         chkpts/basicvsr_plusplus_denoise-28f6920c.pth \
         data/girl \
+        --max-seq-len 12 \
         results/denoise_demo_000
 }
 
-video_zoom4x
+# video_zoom4x
 # video_deblur
-# video_denoise
+video_denoise

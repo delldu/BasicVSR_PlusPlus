@@ -31,7 +31,6 @@ class BasicVSRNet(nn.Module):
     """
 
     def __init__(self, mid_channels=64, num_blocks=30, spynet_pretrained=None):
-
         super().__init__()
         pdb.set_trace()
 
@@ -56,21 +55,6 @@ class BasicVSRNet(nn.Module):
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
         pdb.set_trace()
 
-    def check_if_mirror_extended(self, lrs):
-        """Check whether the input is a mirror-extended sequence.
-
-        If mirror-extended, the i-th (i=0, ..., t-1) frame is equal to the
-        (t-1-i)-th frame.
-
-        Args:
-            lrs (tensor): Input LR images with shape (n, t, c, h, w)
-        """
-
-        self.is_mirror_extended = False
-        if lrs.size(1) % 2 == 0:
-            lrs_1, lrs_2 = torch.chunk(lrs, 2, dim=1)
-            if torch.norm(lrs_1 - lrs_2.flip(1)) == 0:
-                self.is_mirror_extended = True
 
     def compute_flow(self, lrs):
         """Compute optical flow using SPyNet for feature warping.
@@ -93,11 +77,7 @@ class BasicVSRNet(nn.Module):
         lrs_2 = lrs[:, 1:, :, :, :].reshape(-1, c, h, w)
 
         flows_backward = self.spynet(lrs_1, lrs_2).view(n, t - 1, 2, h, w)
-
-        if self.is_mirror_extended:  # flows_forward = flows_backward.flip(1)
-            flows_forward = None
-        else:
-            flows_forward = self.spynet(lrs_2, lrs_1).view(n, t - 1, 2, h, w)
+        flows_forward = self.spynet(lrs_2, lrs_1).view(n, t - 1, 2, h, w)
 
         return flows_forward, flows_backward
 
@@ -113,9 +93,6 @@ class BasicVSRNet(nn.Module):
 
         n, t, c, h, w = lrs.size()
         assert h >= 64 and w >= 64, "The height and width of inputs should be at least 64, " f"but got {h} and {w}."
-
-        # check whether the input is an extended sequence
-        self.check_if_mirror_extended(lrs)
 
         # compute optical flow
         flows_forward, flows_backward = self.compute_flow(lrs)
@@ -266,8 +243,8 @@ class SPyNet(nn.Module):
         for level in range(5):
             ref.append(F.avg_pool2d(input=ref[-1], kernel_size=2, stride=2, count_include_pad=False))
             supp.append(F.avg_pool2d(input=supp[-1], kernel_size=2, stride=2, count_include_pad=False))
-        ref = ref[::-1]
-        supp = supp[::-1]
+        ref = ref[::-1] # reverse list
+        supp = supp[::-1] # reverse list
 
         # flow computation
         flow = ref[0].new_zeros(n, 2, h // 32, w // 32)
