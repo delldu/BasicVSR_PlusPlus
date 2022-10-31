@@ -34,11 +34,7 @@ def video_forward(model, input_tensor, device, scale=1, batch_size=10):
         progress_bar.update(1)
 
         input_tensor_clip = input_tensor[i : i + batch_size, :, :]
-
-        out_clip = todos.model.video_tile_forward(
-            model, device, input_tensor_clip, h_tile_size=512, w_tile_size=512, overlap_size=20, scale=scale
-        )
-
+        out_clip = todos.model.forward(model, device, input_tensor_clip)
         output_tensor[i : i + batch_size, :, :, :] = out_clip
 
     return output_tensor.clamp(0.0, 1.0)
@@ -94,7 +90,7 @@ def video_zoom4x_predict(input_file, output_file):
     video.forward(callback=zoom_video_frame)
 
     lq = torch.cat(lq_list, dim=0)
-    hq = video_forward(model, lq, device, scale=4, batch_size=10)
+    hq = video_forward(model, lq, device, scale=4)
 
     for i in range(hq.shape[0]):
         # save image
@@ -164,7 +160,7 @@ def video_deblur_predict(input_file, output_file):
     video.forward(callback=deblur_video_frame)
 
     lq = torch.cat(lq_list, dim=0)
-    hq = video_forward(model, lq, device, batch_size=16)
+    hq = video_forward(model, lq, device)
 
     for i in range(hq.shape[0]):
         # save image
@@ -234,7 +230,7 @@ def video_denoise_predict(input_file, sigma, output_file):
     video.forward(callback=denoise_video_frame)
 
     lq = torch.cat(lq_list, dim=0)
-    hq = video_forward(model, lq, device, batch_size=10)
+    hq = video_forward(model, lq, device)
 
     for i in range(hq.shape[0]):
         # save image

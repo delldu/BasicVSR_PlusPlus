@@ -239,7 +239,8 @@ def flow_warp(x, flow, interpolation: str = "bilinear", padding_mode: str = "zer
         )
     _, _, h, w = x.size()
     # create mesh grid
-    grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing="ij")
+    # grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing="ij")
+    grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w))
     grid = torch.stack((grid_x, grid_y), 2).type_as(x)  # (h, w, 2)
     # grid.requires_grad = False
 
@@ -272,6 +273,110 @@ class PixelShufflePack(nn.Module):
         x = self.upsample_conv(x)
         x = F.pixel_shuffle(x, self.scale_factor)
         return x
+
+
+class ModulatedDeformConv2d(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        deform_groups=1,
+        bias=True,
+    ):
+        super(ModulatedDeformConv2d, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = (kernel_size, kernel_size)
+        self.stride = (stride, stride)
+        self.padding = (padding, padding)
+        self.dilation = (dilation, dilation)
+        self.groups = groups
+        self.deform_groups = deform_groups
+        # enable compatibility with nn.Conv2d
+        self.transposed = False
+        self.output_padding = 0
+
+        self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels // groups, *self.kernel_size))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(out_channels))
+        else:
+            self.register_parameter("bias", None)
+
+    def forward(self, x, offset, mask):
+        pass
+        return x
+
+
+class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
+    """Second-order deformable alignment module.
+
+    Args:
+        in_channels (int): Same as nn.Conv2d.
+        out_channels (int): Same as nn.Conv2d.
+        kernel_size (int or tuple[int]): Same as nn.Conv2d.
+        stride (int or tuple[int]): Same as nn.Conv2d.
+        padding (int or tuple[int]): Same as nn.Conv2d.
+        dilation (int or tuple[int]): Same as nn.Conv2d.
+        groups (int): Same as nn.Conv2d.
+        bias (bool): False.
+        max_residue_magnitude (int): The maximum magnitude of the offset
+            residue (Eq. 6 in paper). Default: 10.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.max_residue_magnitude = kwargs.pop("max_residue_magnitude", 10)
+        super(SecondOrderDeformableAlignment, self).__init__(*args, **kwargs)
+        self.conv_offset = nn.Sequential(
+            nn.Conv2d(3 * self.out_channels + 4, self.out_channels, 3, 1, 1),
+            nn.LeakyReLU(negative_slope=0.1, inplace=True),
+            nn.Conv2d(self.out_channels, self.out_channels, 3, 1, 1),
+            nn.LeakyReLU(negative_slope=0.1, inplace=True),
+            nn.Conv2d(self.out_channels, self.out_channels, 3, 1, 1),
+            nn.LeakyReLU(negative_slope=0.1, inplace=True),
+            nn.Conv2d(self.out_channels, 27 * self.deform_groups, 3, 1, 1),
+        )
+        # (Pdb) self.conv_offset
+        # Sequential(
+        #   (0): Conv2d(196, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        #   (1): LeakyReLU(negative_slope=0.1, inplace=True)
+        #   (2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        #   (3): LeakyReLU(negative_slope=0.1, inplace=True)
+        #   (4): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        #   (5): LeakyReLU(negative_slope=0.1, inplace=True)
+        #   (6): Conv2d(64, 432, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        # )
+
+    def forward(self, x, extra_feat, flow_1, flow_2):
+        extra_feat = torch.cat([extra_feat, flow_1, flow_2], dim=1)
+        out = self.conv_offset(extra_feat)
+        o1, o2, mask = torch.chunk(out, 3, dim=1)  # out.size() -- [1, 432, 135, 240]
+
+        # offset
+        offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))
+        offset_1, offset_2 = torch.chunk(offset, 2, dim=1)
+        offset_1 = offset_1 + flow_1.flip(1).repeat(1, offset_1.size(1) // 2, 1, 1)
+        offset_2 = offset_2 + flow_2.flip(1).repeat(1, offset_2.size(1) // 2, 1, 1)
+        offset = torch.cat([offset_1, offset_2], dim=1)  # [1, 288, 180, 320]
+
+        # mask
+        mask = torch.sigmoid(mask)  # [1, 144, 180, 320]
+
+        return torchvision.ops.deform_conv2d(
+            x,
+            offset,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            mask,
+        )
 
 
 class BasicVSRPlusPlus(nn.Module):
@@ -480,7 +585,7 @@ class BasicVSRPlusPlus(nn.Module):
         # outputs[i].size() -- [1, 3, 540, 960] for i in [0, 11]
         return torch.stack(outputs, dim=1)  # [1, 12, 3, 540, 960]
 
-    def forward(self, lqs):
+    def forward_x(self, lqs):
         """Forward function for BasicVSR++.
         Args:
             lqs (tensor): Input low quality (LQ) sequence with
@@ -534,109 +639,43 @@ class BasicVSRPlusPlus(nn.Module):
 
         return self.upsample(lqs, feats)
 
+    def forward(self, x):
+        # Define max GPU/CPU memory -- 4G
+        max_h = 1024
+        max_W = 1024
+        multi_times = 8
 
-class ModulatedDeformConv2d(nn.Module):
-    def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        stride=1,
-        padding=0,
-        dilation=1,
-        groups=1,
-        deform_groups=1,
-        bias=True,
-    ):
-        super(ModulatedDeformConv2d, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = (kernel_size, kernel_size)
-        self.stride = (stride, stride)
-        self.padding = (padding, padding)
-        self.dilation = (dilation, dilation)
-        self.groups = groups
-        self.deform_groups = deform_groups
-        # enable compatibility with nn.Conv2d
-        self.transposed = False
-        self.output_padding = 0
-
-        self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels // groups, *self.kernel_size))
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_channels))
+        # Need Resize ?
+        B, C, H, W = x.size()
+        if H > max_h or W > max_W:
+            s = min(max_h / H, max_W / W)
+            SH, SW = int(s * H), int(s * W)
+            resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
         else:
-            self.register_parameter("bias", None)
+            resize_x = x
 
-    def forward(self, x, offset, mask):
-        pass
-        return x
+        # Need Pad ?
+        PH, PW = resize_x.size(2), resize_x.size(3)
+        if PH % multi_times != 0 or PW % multi_times != 0:
+            r_pad = multi_times - (PW % multi_times)
+            b_pad = multi_times - (PH % multi_times)
+            resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
+        else:
+            resize_pad_x = resize_x
 
+        y = self.forward_x(resize_pad_x.unsqueeze(0)).squeeze(0)
+        del resize_pad_x, resize_x  # Release memory !!!
 
-class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
-    """Second-order deformable alignment module.
+        if self.is_low_res_input:  # Zoom !!!
+            y = y[:, :, 0 : 4 * PH, 0 : 4 * PW]  # Remove Pads
+            y = F.interpolate(y, size=(4 * H, 4 * W), mode="bilinear", align_corners=False)
+        else:
+            # denoise/deblur
+            y = y[:, :, 0:PH, 0:PW]  # Remove Pads
+            if PH != H or PW != W:
+                y = F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)
 
-    Args:
-        in_channels (int): Same as nn.Conv2d.
-        out_channels (int): Same as nn.Conv2d.
-        kernel_size (int or tuple[int]): Same as nn.Conv2d.
-        stride (int or tuple[int]): Same as nn.Conv2d.
-        padding (int or tuple[int]): Same as nn.Conv2d.
-        dilation (int or tuple[int]): Same as nn.Conv2d.
-        groups (int): Same as nn.Conv2d.
-        bias (bool): False.
-        max_residue_magnitude (int): The maximum magnitude of the offset
-            residue (Eq. 6 in paper). Default: 10.
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.max_residue_magnitude = kwargs.pop("max_residue_magnitude", 10)
-        super(SecondOrderDeformableAlignment, self).__init__(*args, **kwargs)
-        self.conv_offset = nn.Sequential(
-            nn.Conv2d(3 * self.out_channels + 4, self.out_channels, 3, 1, 1),
-            nn.LeakyReLU(negative_slope=0.1, inplace=True),
-            nn.Conv2d(self.out_channels, self.out_channels, 3, 1, 1),
-            nn.LeakyReLU(negative_slope=0.1, inplace=True),
-            nn.Conv2d(self.out_channels, self.out_channels, 3, 1, 1),
-            nn.LeakyReLU(negative_slope=0.1, inplace=True),
-            nn.Conv2d(self.out_channels, 27 * self.deform_groups, 3, 1, 1),
-        )
-        # (Pdb) self.conv_offset
-        # Sequential(
-        #   (0): Conv2d(196, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        #   (1): LeakyReLU(negative_slope=0.1, inplace=True)
-        #   (2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        #   (3): LeakyReLU(negative_slope=0.1, inplace=True)
-        #   (4): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        #   (5): LeakyReLU(negative_slope=0.1, inplace=True)
-        #   (6): Conv2d(64, 432, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-        # )
-
-    def forward(self, x, extra_feat, flow_1, flow_2):
-        extra_feat = torch.cat([extra_feat, flow_1, flow_2], dim=1)
-        out = self.conv_offset(extra_feat)
-        o1, o2, mask = torch.chunk(out, 3, dim=1)  # out.size() -- [1, 432, 135, 240]
-
-        # offset
-        offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))
-        offset_1, offset_2 = torch.chunk(offset, 2, dim=1)
-        offset_1 = offset_1 + flow_1.flip(1).repeat(1, offset_1.size(1) // 2, 1, 1)
-        offset_2 = offset_2 + flow_2.flip(1).repeat(1, offset_2.size(1) // 2, 1, 1)
-        offset = torch.cat([offset_1, offset_2], dim=1)  # [1, 288, 180, 320]
-
-        # mask
-        mask = torch.sigmoid(mask)  # [1, 144, 180, 320]
-
-        return torchvision.ops.deform_conv2d(
-            x,
-            offset,
-            self.weight,
-            self.bias,
-            self.stride,
-            self.padding,
-            self.dilation,
-            mask,
-        )
+        return y.clamp(0.0, 1.0)
 
 
 def zoom_model():
