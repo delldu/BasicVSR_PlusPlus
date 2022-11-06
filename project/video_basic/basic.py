@@ -367,7 +367,7 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
         # mask
         mask = torch.sigmoid(mask)  # [1, 144, 180, 320]
 
-        return torchvision.ops.deform_conv2d(
+        y =  torchvision.ops.deform_conv2d(
             x,
             offset,
             self.weight,
@@ -377,6 +377,9 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
             self.dilation,
             mask,
         )
+
+        return y
+
 
 
 class BasicVSRPlusPlus(nn.Module):
@@ -672,8 +675,7 @@ class BasicVSRPlusPlus(nn.Module):
         else:
             # denoise/deblur
             y = y[:, :, 0:PH, 0:PW]  # Remove Pads
-            if PH != H or PW != W:
-                y = F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)
+            y = F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)
 
         return y.clamp(0.0, 1.0)
 
