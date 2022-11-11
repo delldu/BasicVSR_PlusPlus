@@ -22,6 +22,31 @@ from . import basic
 
 import pdb
 
+def get_tvm_model():
+    """
+    TVM model base on torch.jit.trace, much more orignal than torch.jit.script
+    That's why we construct it from DeepGuidedFilterAdvanced
+    """
+    device = todos.model.get_device()
+    model = basic.zoom_model()
+    model = model.to(device)
+    model.eval()
+    print(f"Running tvm model model on {device} ...")
+
+    return model, device
+
+
+def get_zoom_model():
+    """Create model."""
+
+    device = todos.model.get_device()
+    model = basic.zoom_model()
+    model = model.to(device)
+    model.eval()
+
+    print(f"Running on {device} ...")
+    return model, device
+
 
 def video_forward(model, input_tensor, device, scale=1, batch_size=10):
     B, C, H, W = input_tensor.size()  # (100, 3, 180, 320)
@@ -44,18 +69,13 @@ def get_zoom4x_model():
     """Create model."""
 
     device = todos.model.get_device()
-
-    model_path = "models/video_zoom4x.pth"
-    cdir = os.path.dirname(__file__)
-    checkpoint = model_path if cdir == "" else cdir + "/" + model_path
-
-    model = basic.zoom_model()
-    todos.model.load(model, checkpoint)
+    model = basic.VideoZoom4XModel()
     model = model.to(device)
     model.eval()
 
     print(f"Running on {device} ...")
     model = torch.jit.script(model)
+    print(model.graph)
 
     todos.data.mkdir("output")
     if not os.path.exists("output/video_zoom4x.torch"):
@@ -115,12 +135,7 @@ def get_deblur_model():
 
     device = todos.model.get_device()
 
-    model_path = "models/video_deblur.pth"
-    cdir = os.path.dirname(__file__)
-    checkpoint = model_path if cdir == "" else cdir + "/" + model_path
-
-    model = basic.deblur_model()
-    todos.model.load(model, checkpoint)
+    model = basic.VideoDeblurModel()
     model = model.to(device)
     model.eval()
 
@@ -186,12 +201,7 @@ def get_denoise_model():
 
     device = todos.model.get_device()
 
-    model_path = "models/video_denoise.pth"
-    cdir = os.path.dirname(__file__)
-    checkpoint = model_path if cdir == "" else cdir + "/" + model_path
-
-    model = basic.denoise_model()
-    todos.model.load(model, checkpoint)
+    model = basic.VideoDenoiseModel()
     model = model.to(device)
     model.eval()
 

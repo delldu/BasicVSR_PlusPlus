@@ -8,7 +8,7 @@
 # ***
 # ************************************************************************************/
 #
-
+import os
 import torch
 import torch.nn as nn
 import torchvision
@@ -103,7 +103,8 @@ class SPyNet(nn.Module):
         supp = supp[::-1]  # reverse list
 
         # flow computation
-        flow = ref[0].new_zeros(n, 2, h // 32, w // 32)
+        # flow = ref[0].new_zeros(n, 2, h // 32, w // 32)
+        flow = torch.zeros(n, 2, h // 32, w // 32).to(ref[0].device)
         for level, m in enumerate(self.basic_module):  # range(len(ref)):
             if level == 0:
                 flow_up = flow
@@ -136,8 +137,11 @@ class SPyNet(nn.Module):
 
         # upsize to a multiple of 32
         h, w = ref.shape[2:4]
-        w_up = w if (w % 32) == 0 else 32 * (w // 32 + 1)
-        h_up = h if (h % 32) == 0 else 32 * (h // 32 + 1)
+        # w_up = w if (w % 32) == 0 else 32 * (w // 32 + 1)
+        # h_up = h if (h % 32) == 0 else 32 * (h // 32 + 1)
+
+        w_up = 32 * (w // 32 + 1)
+        h_up = 32 * (h // 32 + 1)
         ref = F.interpolate(ref, size=(h_up, w_up), mode="bilinear", align_corners=False)
         supp = F.interpolate(supp, size=(h_up, w_up), mode="bilinear", align_corners=False)
 
@@ -233,10 +237,12 @@ def flow_warp(x, flow, interpolation: str = "bilinear", padding_mode: str = "zer
     Returns:
         Tensor: Warped image or feature map.
     """
-    if x.size()[-2:] != flow.size()[1:3]:
-        raise ValueError(
-            f"The spatial sizes of input ({x.size()[-2:]}) and " f"flow ({flow.size()[1:3]}) are not the same."
-        )
+    # xxxx8888
+    # if x.size()[-2:] != flow.size()[1:3]:
+    #     raise ValueError(
+    #         f"The spatial sizes of input ({x.size()[-2:]}) and " f"flow ({flow.size()[1:3]}) are not the same."
+    #     )
+
     _, _, h, w = x.size()
     # create mesh grid
     # grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w), indexing="ij")
@@ -408,6 +414,12 @@ class BasicVSRPlusPlus(nn.Module):
         is_low_res_input=True,
     ):
         super(BasicVSRPlusPlus, self).__init__()
+        # Define max GPU/CPU memory -- 6G
+        self.MAX_H = 512
+        self.MAX_W = 512
+        self.MAX_TIMES = 8
+
+
         self.mid_channels = mid_channels
         self.is_low_res_input = is_low_res_input
 
@@ -448,6 +460,13 @@ class BasicVSRPlusPlus(nn.Module):
 
         # activation function
         self.lrelu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+
+
+    def load_weights(self, model_path="models/video_denoise.pth"):
+        cdir = os.path.dirname(__file__)
+        checkpoint = model_path if cdir == "" else cdir + "/" + model_path
+        self.load_state_dict(torch.load(checkpoint))
+
 
     def compute_flow(self, lqs) -> List[torch.Tensor]:
         """Compute optical flow using SPyNet for feature alignment.
@@ -494,7 +513,7 @@ class BasicVSRPlusPlus(nn.Module):
         backward_flow_idx: List[int] = backward_frame_idx
 
         pg_keys = ["backward_1", "forward_1", "backward_2", "forward_2"]
-        feat_prop = flows.new_zeros(n, self.mid_channels, h, w).to(flows.device)
+        feat_prop = torch.zeros(n, self.mid_channels, h, w).to(flows.device)
 
         if "forward" in module_name:
             frame_idx = forward_frame_idx
@@ -588,7 +607,7 @@ class BasicVSRPlusPlus(nn.Module):
         # outputs[i].size() -- [1, 3, 540, 960] for i in [0, 11]
         return torch.stack(outputs, dim=1)  # [1, 12, 3, 540, 960]
 
-    def forward_x(self, lqs):
+    def forward(self, lqs):
         """Forward function for BasicVSR++.
         Args:
             lqs (tensor): Input low quality (LQ) sequence with
@@ -599,7 +618,8 @@ class BasicVSRPlusPlus(nn.Module):
         n, t, c, h, w = lqs.size()  # [1, 21, 3, 180, 320]
 
         if self.is_low_res_input:  # Zoom: True
-            lqs_downsample = lqs.clone()
+            # lqs_downsample = lqs.clone()
+            lqs_downsample = lqs
         else:
             lqs_downsample = F.interpolate(
                 lqs.view(-1, c, h, w),
@@ -642,16 +662,35 @@ class BasicVSRPlusPlus(nn.Module):
 
         return self.upsample(lqs, feats)
 
-    def forward(self, x):
-        # Define max GPU/CPU memory -- 4G
-        max_h = 1024
-        max_W = 1024
-        multi_times = 8
 
+def zoom_model():
+    model = BasicVSRPlusPlus(num_blocks=7, is_low_res_input=True)
+    model.load_weights(model_path="models/video_zoom4x.pth")
+    return model
+
+
+def deblur_model():
+    model = BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
+    model.load_weights(model_path="models/video_deblur.pth")
+    return model
+
+
+def denoise_model():
+    model = BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
+    model.load_weights(model_path="models/video_denoise.pth")
+    return model
+
+
+class VideoZoom4XModel(nn.Module):
+    def __init__(self):
+        super(VideoZoom4XModel, self).__init__()
+        self.backbone = zoom_model().eval()
+
+    def forward(self, x):
         # Need Resize ?
         B, C, H, W = x.size()
-        if H > max_h or W > max_W:
-            s = min(max_h / H, max_W / W)
+        if H > self.backbone.MAX_H or W > self.backbone.MAX_W:
+            s = min(self.backbone.MAX_H / H, self.backbone.MAX_W / W)
             SH, SW = int(s * H), int(s * W)
             resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
         else:
@@ -659,34 +698,80 @@ class BasicVSRPlusPlus(nn.Module):
 
         # Need Pad ?
         PH, PW = resize_x.size(2), resize_x.size(3)
-        if PH % multi_times != 0 or PW % multi_times != 0:
-            r_pad = multi_times - (PW % multi_times)
-            b_pad = multi_times - (PH % multi_times)
+        if PH % self.backbone.MAX_TIMES != 0 or PW % self.backbone.MAX_TIMES != 0:
+            r_pad = self.backbone.MAX_TIMES - (PW % self.backbone.MAX_TIMES)
+            b_pad = self.backbone.MAX_TIMES - (PH % self.backbone.MAX_TIMES)
             resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
         else:
             resize_pad_x = resize_x
 
-        y = self.forward_x(resize_pad_x.unsqueeze(0)).squeeze(0)
-        del resize_pad_x, resize_x  # Release memory !!!
+        with torch.no_grad():
+            y = self.backbone(resize_pad_x.unsqueeze(0))
+        y = y.squeeze(0)
 
-        if self.is_low_res_input:  # Zoom !!!
-            y = y[:, :, 0 : 4 * PH, 0 : 4 * PW]  # Remove Pads
-            y = F.interpolate(y, size=(4 * H, 4 * W), mode="bilinear", align_corners=False)
+        y = y[:, :, 0:4*PH, 0:4*PW]  # Remove Pads
+        return F.interpolate(y, size=(4*H, 4*W), mode="bilinear", align_corners=False)  # Remove Resize
+
+
+class VideoDenoiseModel(nn.Module):
+    def __init__(self):
+        super(VideoDenoiseModel, self).__init__()
+        self.backbone = denoise_model().eval()
+
+    def forward(self, x):
+        # Need Resize ?
+        B, C, H, W = x.size()
+        if H > self.backbone.MAX_H or W > self.backbone.MAX_W:
+            s = min(self.backbone.MAX_H / H, self.backbone.MAX_W / W)
+            SH, SW = int(s * H), int(s * W)
+            resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
         else:
-            # denoise/deblur
-            y = y[:, :, 0:PH, 0:PW]  # Remove Pads
-            y = F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)
+            resize_x = x
 
-        return y.clamp(0.0, 1.0)
+        # Need Pad ?
+        PH, PW = resize_x.size(2), resize_x.size(3)
+        if PH % self.backbone.MAX_TIMES != 0 or PW % self.backbone.MAX_TIMES != 0:
+            r_pad = self.backbone.MAX_TIMES - (PW % self.backbone.MAX_TIMES)
+            b_pad = self.backbone.MAX_TIMES - (PH % self.backbone.MAX_TIMES)
+            resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
+        else:
+            resize_pad_x = resize_x
+
+        with torch.no_grad():
+            y = self.backbone(resize_pad_x.unsqueeze(0))
+        y = y.squeeze(0)
+
+        y = y[:, :, 0:PH, 0:PW]  # Remove Pads
+        return F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)  # Remove Resize
 
 
-def zoom_model():
-    return BasicVSRPlusPlus(num_blocks=7, is_low_res_input=True)
+class VideoDeblurModel(nn.Module):
+    def __init__(self):
+        super(VideoDeblurModel, self).__init__()
+        self.backbone = deblur_model().eval()
 
+    def forward(self, x):
+        # Need Resize ?
+        B, C, H, W = x.size()
+        if H > self.backbone.MAX_H or W > self.backbone.MAX_W:
+            s = min(self.backbone.MAX_H / H, self.backbone.MAX_W / W)
+            SH, SW = int(s * H), int(s * W)
+            resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
+        else:
+            resize_x = x
 
-def deblur_model():
-    return BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
+        # Need Pad ?
+        PH, PW = resize_x.size(2), resize_x.size(3)
+        if PH % self.backbone.MAX_TIMES != 0 or PW % self.backbone.MAX_TIMES != 0:
+            r_pad = self.backbone.MAX_TIMES - (PW % self.backbone.MAX_TIMES)
+            b_pad = self.backbone.MAX_TIMES - (PH % self.backbone.MAX_TIMES)
+            resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
+        else:
+            resize_pad_x = resize_x
 
+        with torch.no_grad():
+            y = self.backbone(resize_pad_x.unsqueeze(0))
+        y = y.squeeze(0)
 
-def denoise_model():
-    return BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
+        y = y[:, :, 0:PH, 0:PW]  # Remove Pads
+        return F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)  # Remove Resize
