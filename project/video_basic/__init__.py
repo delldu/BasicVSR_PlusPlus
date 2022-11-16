@@ -24,8 +24,7 @@ import pdb
 
 def get_tvm_model():
     """
-    TVM model base on torch.jit.trace, much more orignal than torch.jit.script
-    That's why we construct it from DeepGuidedFilterAdvanced
+    TVM model base on torch.jit.trace
     """
     device = todos.model.get_device()
     model = basic.zoom_model()
@@ -33,18 +32,6 @@ def get_tvm_model():
     model.eval()
     print(f"Running tvm model model on {device} ...")
 
-    return model, device
-
-
-def get_zoom_model():
-    """Create model."""
-
-    device = todos.model.get_device()
-    model = basic.zoom_model()
-    model = model.to(device)
-    model.eval()
-
-    print(f"Running on {device} ...")
     return model, device
 
 
@@ -69,7 +56,8 @@ def get_zoom4x_model():
     """Create model."""
 
     device = todos.model.get_device()
-    model = basic.VideoZoom4XModel()
+    model = basic.zoom_model()
+    model = todos.model.ResizePadModel(model, scale=4)
     model = model.to(device)
     model.eval()
 
@@ -135,7 +123,8 @@ def get_deblur_model():
 
     device = todos.model.get_device()
 
-    model = basic.VideoDeblurModel()
+    model = basic.deblur_model()
+    model = todos.model.ResizePadModel(model)
     model = model.to(device)
     model.eval()
 
@@ -201,7 +190,8 @@ def get_denoise_model():
 
     device = todos.model.get_device()
 
-    model = basic.VideoDenoiseModel()
+    model = basic.denoise_model()
+    model = todos.model.ResizeModel(model)
     model = model.to(device)
     model.eval()
 

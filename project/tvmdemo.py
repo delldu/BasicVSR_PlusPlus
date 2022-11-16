@@ -18,30 +18,32 @@ import torch
 import todos
 import video_basic
 
-SO_B, SO_C, SO_H, SO_W = 1, 3, 512, 512
+# NotImplementedError: The following operators are not implemented: ['aten::copy_']
 
+SO_B, SO_C, SO_H, SO_W = 1, 3, 512, 512
 
 def compile():
     model, device = video_basic.get_tvm_model()
 
     with torch.no_grad():
-        input = torch.randn(1, SO_B, SO_C, SO_H, SO_W)
+        input = torch.randn(SO_B, SO_C, SO_H, SO_W)
         model = torch.jit.trace(model, input.to(device))
 
     pdb.set_trace()
 
     todos.data.mkdir("output")
     if not os.path.exists("output/video_zoom4x.so"):
-        input = torch.randn(1, SO_B, SO_C, SO_H, SO_W)
+        input = torch.randn(SO_B, SO_C, SO_H, SO_W)
         with torch.no_grad():
             todos.tvmod.compile(model, device, input, "output/video_zoom4x.so")
-
+    todos.model.reset_device()
 
 def predict(input_files, output_dir):
     # Create directory to store result
     todos.data.mkdir(output_dir)
 
     # load model
+    device = todos.model.get_device()
     tvm_model = todos.tvmod.load("output/video_zoom4x.so", "cuda")
 
     # load files

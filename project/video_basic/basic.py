@@ -232,7 +232,8 @@ def flow_warp(x, flow, interpolation: str = "bilinear", padding_mode: str = "zer
             Default: 'bilinear'.
         padding_mode (str): Padding mode: 'zeros' or 'border' or 'reflection'.
             Default: 'zeros'.
-        align_corners (bool): Whether align corners. Default: True.
+        align_corners (bool): Whether align corners. Default
+        : True.
 
     Returns:
         Tensor: Warped image or feature map.
@@ -414,11 +415,10 @@ class BasicVSRPlusPlus(nn.Module):
         is_low_res_input=True,
     ):
         super(BasicVSRPlusPlus, self).__init__()
-        # Define max GPU/CPU memory -- 6G
+        # Define max GPU/CPU memory -- 7G, 640ms
         self.MAX_H = 512
-        self.MAX_W = 512
+        self.MAX_W = 1024
         self.MAX_TIMES = 8
-
 
         self.mid_channels = mid_channels
         self.is_low_res_input = is_low_res_input
@@ -607,7 +607,7 @@ class BasicVSRPlusPlus(nn.Module):
         # outputs[i].size() -- [1, 3, 540, 960] for i in [0, 11]
         return torch.stack(outputs, dim=1)  # [1, 12, 3, 540, 960]
 
-    def forward(self, lqs):
+    def forward_e(self, lqs):
         """Forward function for BasicVSR++.
         Args:
             lqs (tensor): Input low quality (LQ) sequence with
@@ -662,6 +662,10 @@ class BasicVSRPlusPlus(nn.Module):
 
         return self.upsample(lqs, feats)
 
+    def forward(self, x):
+        y = self.forward_e(x.unsqueeze(0))
+        return y.squeeze(0)
+
 
 def zoom_model():
     model = BasicVSRPlusPlus(num_blocks=7, is_low_res_input=True)
@@ -679,99 +683,3 @@ def denoise_model():
     model = BasicVSRPlusPlus(num_blocks=15, is_low_res_input=False)
     model.load_weights(model_path="models/video_denoise.pth")
     return model
-
-
-class VideoZoom4XModel(nn.Module):
-    def __init__(self):
-        super(VideoZoom4XModel, self).__init__()
-        self.backbone = zoom_model().eval()
-
-    def forward(self, x):
-        # Need Resize ?
-        B, C, H, W = x.size()
-        if H > self.backbone.MAX_H or W > self.backbone.MAX_W:
-            s = min(self.backbone.MAX_H / H, self.backbone.MAX_W / W)
-            SH, SW = int(s * H), int(s * W)
-            resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
-        else:
-            resize_x = x
-
-        # Need Pad ?
-        PH, PW = resize_x.size(2), resize_x.size(3)
-        if PH % self.backbone.MAX_TIMES != 0 or PW % self.backbone.MAX_TIMES != 0:
-            r_pad = self.backbone.MAX_TIMES - (PW % self.backbone.MAX_TIMES)
-            b_pad = self.backbone.MAX_TIMES - (PH % self.backbone.MAX_TIMES)
-            resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
-        else:
-            resize_pad_x = resize_x
-
-        with torch.no_grad():
-            y = self.backbone(resize_pad_x.unsqueeze(0))
-        y = y.squeeze(0)
-
-        y = y[:, :, 0:4*PH, 0:4*PW]  # Remove Pads
-        return F.interpolate(y, size=(4*H, 4*W), mode="bilinear", align_corners=False)  # Remove Resize
-
-
-class VideoDenoiseModel(nn.Module):
-    def __init__(self):
-        super(VideoDenoiseModel, self).__init__()
-        self.backbone = denoise_model().eval()
-
-    def forward(self, x):
-        # Need Resize ?
-        B, C, H, W = x.size()
-        if H > self.backbone.MAX_H or W > self.backbone.MAX_W:
-            s = min(self.backbone.MAX_H / H, self.backbone.MAX_W / W)
-            SH, SW = int(s * H), int(s * W)
-            resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
-        else:
-            resize_x = x
-
-        # Need Pad ?
-        PH, PW = resize_x.size(2), resize_x.size(3)
-        if PH % self.backbone.MAX_TIMES != 0 or PW % self.backbone.MAX_TIMES != 0:
-            r_pad = self.backbone.MAX_TIMES - (PW % self.backbone.MAX_TIMES)
-            b_pad = self.backbone.MAX_TIMES - (PH % self.backbone.MAX_TIMES)
-            resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
-        else:
-            resize_pad_x = resize_x
-
-        with torch.no_grad():
-            y = self.backbone(resize_pad_x.unsqueeze(0))
-        y = y.squeeze(0)
-
-        y = y[:, :, 0:PH, 0:PW]  # Remove Pads
-        return F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)  # Remove Resize
-
-
-class VideoDeblurModel(nn.Module):
-    def __init__(self):
-        super(VideoDeblurModel, self).__init__()
-        self.backbone = deblur_model().eval()
-
-    def forward(self, x):
-        # Need Resize ?
-        B, C, H, W = x.size()
-        if H > self.backbone.MAX_H or W > self.backbone.MAX_W:
-            s = min(self.backbone.MAX_H / H, self.backbone.MAX_W / W)
-            SH, SW = int(s * H), int(s * W)
-            resize_x = F.interpolate(x, size=(SH, SW), mode="bilinear", align_corners=False)
-        else:
-            resize_x = x
-
-        # Need Pad ?
-        PH, PW = resize_x.size(2), resize_x.size(3)
-        if PH % self.backbone.MAX_TIMES != 0 or PW % self.backbone.MAX_TIMES != 0:
-            r_pad = self.backbone.MAX_TIMES - (PW % self.backbone.MAX_TIMES)
-            b_pad = self.backbone.MAX_TIMES - (PH % self.backbone.MAX_TIMES)
-            resize_pad_x = F.pad(resize_x, (0, r_pad, 0, b_pad), mode="replicate")
-        else:
-            resize_pad_x = resize_x
-
-        with torch.no_grad():
-            y = self.backbone(resize_pad_x.unsqueeze(0))
-        y = y.squeeze(0)
-
-        y = y[:, :, 0:PH, 0:PW]  # Remove Pads
-        return F.interpolate(y, size=(H, W), mode="bilinear", align_corners=False)  # Remove Resize

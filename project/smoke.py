@@ -14,17 +14,18 @@ import os
 import time
 import random
 import torch
+import todos
 
 import video_basic
 
 from tqdm import tqdm
 
 if __name__ == "__main__":
-    model, device = video_basic.get_zoom_model() # deblur_model, denoise_model
+    model, device = video_basic.get_zoom4x_model() # deblur_model, denoise_model
     model = model.eval()
 
     N = 100
-    B, C, H, W = 1, 3, model.MAX_H, model.MAX_W
+    B, C, H, W = 1, 3, model.max_h, model.max_w
 
     mean_time = 0
     progress_bar = tqdm(total=N)
@@ -33,13 +34,11 @@ if __name__ == "__main__":
 
         h = random.randint(0, 32)
         w = random.randint(0, 32)
-        x = torch.randn(1, B, C, H + h, W + w)
+        x = torch.randn(B, C, H + h, W + w)
         # print("x: ", x.size())
 
         start_time = time.time()
-        with torch.no_grad():
-            y = model(x.to(device))
-        torch.cuda.synchronize()
+        y = todos.model.forward(model, device, x)
         mean_time += time.time() - start_time
 
     mean_time /= N
